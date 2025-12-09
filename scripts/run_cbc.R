@@ -21,7 +21,8 @@ parse_args <- function(args) {
     input_file = NULL,
     output_file = NULL,
     input_format = "wide", # single defaults to wide JSON; batch defaults to long CSV
-    collection_interval = 48
+    collection_interval = 48,
+    stream = FALSE
   )
 
   i <- 1
@@ -47,6 +48,9 @@ parse_args <- function(args) {
     } else if (flag %in% c("-F", "--input-format")) {
       parsed$input_format <- value
       i <- i + 2
+    } else if (identical(flag, "--stream")) {
+      parsed$stream <- TRUE
+      i <- i + 1
     } else if (flag %in% c("-h", "--help")) {
       cat(
         "\nCBC prediction CLI\n",
@@ -55,6 +59,7 @@ parse_args <- function(args) {
         "  --input-file / -f            Path to JSON (single) or CSV (batch) input file\n",
         "  --output-file / -o           Path to CSV output (batch mode only)\n",
         "  --input-format / -F          'wide' (default for single) or 'long' (will preprocess)\n",
+        "  --stream                     Stream newline-delimited JSON on stdin for single mode (keeps process alive)\n",
         "  --collection-interval / -c   Hours window for prior/post lab search. Default: 48\n",
         sep = ""
       )
@@ -92,9 +97,7 @@ write_json_output <- function(df) {
   cat(jsonlite::toJSON(df, dataframe = "rows", auto_unbox = TRUE, na = "null", POSIXt = "ISO8601"))
 }
 
-run_single <- function(args, models_combined, mix_ratio_workflows) {
-  input <- read_json_input(args$input, args$input_file)
-
+prep_and_predict <- function(input, args, models_combined, mix_ratio_workflows) {
   prepped <-
     if (identical(args$input_format, "long")) {
       preprocessCBCData(input, collection_interval = args$collection_interval)
@@ -102,12 +105,42 @@ run_single <- function(args, models_combined, mix_ratio_workflows) {
       input
     }
 
-  preds <- makeCbcPredictions(
+  makeCbcPredictions(
     input_raw = prepped,
     models_combined = models_combined,
     mix_ratio_workflows = mix_ratio_workflows
   )
+}
+
+run_single <- function(args, models_combined, mix_ratio_workflows) {
+  input <- read_json_input(args$input, args$input_file)
+
+  preds <- prep_and_predict(input, args, models_combined, mix_ratio_workflows)
   write_json_output(preds)
+}
+
+run_single_stream <- function(args, models_combined, mix_ratio_workflows) {
+  con <- file("stdin")
+  while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+    json_line <- trimws(line)
+    if (identical(json_line, "")) next
+
+    res <- tryCatch(
+      {
+        input <- as_tibble(jsonlite::fromJSON(json_line, simplifyDataFrame = TRUE))
+        preds <- prep_and_predict(input, args, models_combined, mix_ratio_workflows)
+        write_json_output(preds)
+        cat("\n")
+        flush.console()
+        NULL
+      },
+      error = function(e) e
+    )
+
+    if (inherits(res, "error")) {
+      message("Skipping payload: ", res$message)
+    }
+  }
 }
 
 run_batch <- function(args, models_combined, mix_ratio_workflows) {
@@ -141,7 +174,11 @@ main <- function() {
   mix_ratio_workflows <- read_rds("models/cbc_mix_ratio_model.RDS")
 
   if (identical(args$mode, "single")) {
-    run_single(args, models_combined, mix_ratio_workflows)
+    if (isTRUE(args$stream)) {
+      run_single_stream(args, models_combined, mix_ratio_workflows)
+    } else {
+      run_single(args, models_combined, mix_ratio_workflows)
+    }
   } else if (identical(args$mode, "batch")) {
     run_batch(args, models_combined, mix_ratio_workflows)
   } else {
