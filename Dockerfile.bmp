@@ -1,0 +1,22 @@
+FROM rocker/tidyverse:4.3.2
+
+# System deps for building lightgbm and friends
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      cmake \
+      libssl-dev \
+      libcurl4-openssl-dev \
+      libgit2-dev \
+      libgomp1 && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN R -q -e "install.packages(c('tidymodels','bundle','janitor','jsonlite','lubridate','lightgbm','bonsai'))"
+
+WORKDIR /app
+
+COPY models ./models
+COPY scripts ./scripts
+COPY data ./data
+
+ENTRYPOINT ["Rscript", "scripts/run_bmp.R"]
