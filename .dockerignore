@@ -1,8 +1,12 @@
 .git
 .gitignore
 .DS_Store
-renv
-renv.lock
 *.Rproj
 README.md
 LICENSE
+
+# Keep renv metadata for restore but skip cache/library
+renv/library
+renv/staging
+renv/.rprofile
+renv/.cache

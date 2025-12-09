@@ -11,9 +11,13 @@ RUN apt-get update -y && \
       libgomp1 && \
     rm -rf /var/lib/apt/lists/*
 
-RUN R -q -e "install.packages(c('tidymodels','bundle','janitor','jsonlite','lubridate','lightgbm','bonsai'))"
-
+ENV RENV_PATHS_CACHE=/root/.cache/R/renv
 WORKDIR /app
+
+# Restore R packages via renv
+COPY renv.lock renv.lock
+COPY renv/ renv/
+RUN R -q -e "install.packages('renv', repos = 'https://cloud.r-project.org'); renv::restore(clean = TRUE, repos = c(CRAN = 'https://cloud.r-project.org'))"
 
 COPY scripts ./scripts
 COPY data ./data
