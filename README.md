@@ -16,6 +16,13 @@ Stand-alone contamination models with Docker images and scripts.
 - Single JSON (long → preprocess → predict): `cat sample_bmp_long.json | docker run --rm -i nspies13/contamination-bmp:latest --mode single --input-format long`
 - Batch CSV (long → CSV predictions): `docker run --rm -v "$PWD/data:/data" nspies13/contamination-bmp:latest --mode batch --input-format long --input-file /data/bmp_test_long.csv --output-file /data/bmp_predictions.csv`
 - Preprocess only (long → wide): `docker run --rm -v "$PWD/data:/data" nspies13/contamination-bmp:latest --mode batch --input-format long --input-file /data/bmp_test_long.csv --output-file /data/bmp_wide.csv` (drop prediction columns if you only need features).
+- REST API (POST /predict; optional query `input_format=long`, `lookback_hours=72`):
+  ```
+  docker run --rm -p 8000:8000 nspies13/contamination-bmp:latest --mode api --input-format wide --port 8000
+  curl -X POST http://localhost:8000/predict \
+    -H "Content-Type: application/json" \
+    -d '{"PATIENT_ID":"abc","DRAWN_DT_TM":"2024-01-01T00:00:00Z",...}'
+  ```
 - Streaming JSON (keeps container alive; newline-delimited JSON on stdin, one response line per request):
   ```
   docker run --rm -i nspies13/contamination-bmp:latest --mode single --stream --input-format wide
@@ -31,6 +38,13 @@ Stand-alone contamination models with Docker images and scripts.
 - Single JSON (long → preprocess → predict): `cat sample_cbc_long.json | docker run --rm -i nspies13/contamination-cbc:latest --mode single --input-format long`
 - Batch CSV (long → CSV predictions): `docker run --rm -v "$PWD/data:/data" nspies13/contamination-cbc:latest --mode batch --input-format long --input-file /data/cbc_test_long.csv --output-file /data/cbc_predictions.csv`
 - Preprocess only (long → wide): `docker run --rm -v "$PWD/data:/data" nspies13/contamination-cbc:latest --mode batch --input-format long --input-file /data/cbc_test_long.csv --output-file /data/cbc_wide.csv` (drop prediction columns if you only need features).
+- REST API (POST /predict; optional query `input_format=long`, `collection_interval=72`):
+  ```
+  docker run --rm -p 8000:8000 nspies13/contamination-cbc:latest --mode api --input-format wide --port 8000
+  curl -X POST http://localhost:8000/predict \
+    -H "Content-Type: application/json" \
+    -d '{"PATIENT_ID":"abc","DRAWN_DT_TM":"2024-01-01T00:00:00Z",...}'
+  ```
 - Streaming JSON (keeps container alive; newline-delimited JSON on stdin, one response line per request):
   ```
   docker run --rm -i nspies13/contamination-cbc:latest --mode single --stream --input-format wide

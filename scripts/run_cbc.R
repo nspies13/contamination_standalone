@@ -6,6 +6,7 @@ suppressPackageStartupMessages({
   library(jsonlite)
   library(readr)
   library(lubridate)
+  library(plumber)
   source("scripts/cbc_helpers.R")
 })
 
@@ -22,7 +23,9 @@ parse_args <- function(args) {
     output_file = NULL,
     input_format = "wide", # single defaults to wide JSON; batch defaults to long CSV
     collection_interval = 48,
-    stream = FALSE
+    stream = FALSE,
+    port = 8000,
+    host = "0.0.0.0"
   )
 
   i <- 1
@@ -51,15 +54,23 @@ parse_args <- function(args) {
     } else if (identical(flag, "--stream")) {
       parsed$stream <- TRUE
       i <- i + 1
+    } else if (flag %in% c("-p", "--port")) {
+      parsed$port <- as.integer(value)
+      i <- i + 2
+    } else if (identical(flag, "--host")) {
+      parsed$host <- value
+      i <- i + 2
     } else if (flag %in% c("-h", "--help")) {
       cat(
         "\nCBC prediction CLI\n",
-        "  --mode / -m                  Mode: single (JSON I/O) or batch (CSV I/O). Default: single\n",
+        "  --mode / -m                  Mode: single | batch | api. Default: single\n",
         "  --input / -i                 Inline JSON payload for single mode (optional)\n",
         "  --input-file / -f            Path to JSON (single) or CSV (batch) input file\n",
         "  --output-file / -o           Path to CSV output (batch mode only)\n",
         "  --input-format / -F          'wide' (default for single) or 'long' (will preprocess)\n",
         "  --stream                     Stream newline-delimited JSON on stdin for single mode (keeps process alive)\n",
+        "  --port / -p                  Port for API mode. Default: 8000\n",
+        "  --host                       Bind host for API mode. Default: 0.0.0.0\n",
         "  --collection-interval / -c   Hours window for prior/post lab search. Default: 48\n",
         sep = ""
       )
@@ -167,6 +178,52 @@ run_batch <- function(args, models_combined, mix_ratio_workflows) {
   message("Wrote CBC predictions to ", args$output_file)
 }
 
+run_api <- function(args, models_combined, mix_ratio_workflows) {
+  base_args <- args
+
+  router <- pr()
+
+  router <- pr_get(router, "/health", function() list(status = "ok"))
+
+  router <- pr_post(router, "/predict", function(req, res) {
+    body <- req$postBody
+    if (is.null(body) || identical(body, "")) {
+      res$status <- 400
+      return(list(error = "Empty request body"))
+    }
+
+    parsed <- tryCatch(
+      as_tibble(jsonlite::fromJSON(body, simplifyDataFrame = TRUE)),
+      error = function(e) e
+    )
+    if (inherits(parsed, "error")) {
+      res$status <- 400
+      return(list(error = parsed$message))
+    }
+
+    local_args <- base_args
+    if (!is.null(req$args$query$input_format)) {
+      local_args$input_format <- req$args$query$input_format
+    }
+    if (!is.null(req$args$query$collection_interval)) {
+      local_args$collection_interval <- as.numeric(req$args$query$collection_interval)
+    }
+
+    preds <- tryCatch(
+      prep_and_predict(parsed, local_args, models_combined, mix_ratio_workflows),
+      error = function(e) e
+    )
+    if (inherits(preds, "error")) {
+      res$status <- 400
+      return(list(error = preds$message))
+    }
+
+    preds
+  })
+
+  pr_run(router, host = args$host, port = args$port)
+}
+
 main <- function() {
   args <- parse_args(commandArgs(trailingOnly = TRUE))
 
@@ -181,8 +238,10 @@ main <- function() {
     }
   } else if (identical(args$mode, "batch")) {
     run_batch(args, models_combined, mix_ratio_workflows)
+  } else if (identical(args$mode, "api")) {
+    run_api(args, models_combined, mix_ratio_workflows)
   } else {
-    cli_stop("Mode must be 'single' or 'batch'.")
+    cli_stop("Mode must be 'single', 'batch', or 'api'.")
   }
 }
 

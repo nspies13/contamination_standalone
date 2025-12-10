@@ -8,7 +8,8 @@ RUN apt-get update -y && \
       libssl-dev \
       libcurl4-openssl-dev \
       libgit2-dev \
-      libgomp1 && \
+      libgomp1 \
+      libsodium-dev && \
     rm -rf /var/lib/apt/lists/*
 
 ENV RENV_PATHS_CACHE=/root/.cache/R/renv
@@ -18,6 +19,7 @@ WORKDIR /app
 COPY renv.lock renv.lock
 COPY renv/ renv/
 RUN R -q -e "install.packages('renv', repos = 'https://cloud.r-project.org'); renv::restore(clean = TRUE, repos = c(CRAN = 'https://packagemanager.posit.co/cran/latest'))"
+RUN R -q -e "install.packages('plumber', repos = 'https://cloud.r-project.org')"
 
 COPY scripts ./scripts
 COPY data ./data
