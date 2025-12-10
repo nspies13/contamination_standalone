@@ -60,7 +60,7 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
   library(tidyverse)
   library(tidymodels)
   cur_column <- dplyr::cur_column
-
+  
   shim_xgb_load_raw <- function() {
     if (!requireNamespace("xgboost", quietly = TRUE)) {
       return(invisible())
@@ -80,6 +80,9 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
       lockBinding("xgb.load.raw", ns)
     }
   }
+  
+  # xgboost 2.x removed the as_booster argument; patch it back for bundled models
+  shim_xgb_load_raw()
 
   input <- input_raw |>
     select(any_of(lab_strings), matches("prior|post")) |>
