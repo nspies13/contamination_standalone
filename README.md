@@ -35,7 +35,7 @@ Load the bundled models and expose a REST API:
   ```
   Each line is parsed independently; the response is a JSON array of per-line results.
 
-Responses are JSON with prediction probabilities/predicted classes (and mix ratios when compatible with the xgboost version).
+Responses are JSON with prediction probabilities/predicted classes (and mix ratios when I fix the versioning error).
 
 ## Training images
 - BMP training: `docker run --rm -v "$PWD/data:/data" -v "$PWD/tmp_outputs:/outputs" nspies13/contamination-bmp-train:latest /data/bmp_test_wide.csv /data/fluid_concentrations.tsv /outputs/bmp_models_combined.RDS`
