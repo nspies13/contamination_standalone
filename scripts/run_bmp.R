@@ -20,6 +20,46 @@ start_api <- function(host, port, models) {
 
   router <- pr_get(router, "/health", function() list(status = "ok"))
 
+  router <- pr_post(router, "/predict_stream", function(req, res) {
+    body <- req$postBody
+    if (is.null(body) || identical(body, "")) {
+      res$status <- 400
+      return(list(error = "Empty request body"))
+    }
+
+    lines <- strsplit(body, "\n", fixed = TRUE)[[1]]
+    lines <- lines[nzchar(trimws(lines))]
+    if (length(lines) == 0) {
+      res$status <- 400
+      return(list(error = "No JSON lines provided"))
+    }
+
+    results <- lapply(lines, function(line) {
+      payload <- tryCatch(
+        as_tibble(jsonlite::fromJSON(line, simplifyDataFrame = TRUE)),
+        error = function(e) e
+      )
+      if (inherits(payload, "error")) {
+        return(list(error = payload$message))
+      }
+
+      preds <- tryCatch(
+        makeBmpPredictions(
+          input_raw = payload,
+          models_combined = models$models_combined,
+          mix_ratio_models = models$mix_ratio_models
+        ),
+        error = function(e) e
+      )
+      if (inherits(preds, "error")) {
+        return(list(error = preds$message))
+      }
+      preds
+    })
+
+    results
+  })
+
   router <- pr_post(router, "/predict", function(req, res) {
     body <- req$postBody
     if (is.null(body) || identical(body, "")) {

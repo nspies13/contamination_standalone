@@ -30,4 +30,12 @@ Model paths (optional overrides):
     -d '[{"Hgb":12.0,"Plt":103,"WBC":0.35,"Hgb_prior":10.9,"WBC_prior":0.23,"Plt_prior":115,"Hgb_post":10.8,"WBC_post":0.6,"Plt_post":60}]'
   ```
 
+### Streaming endpoint
+- Send newline-delimited JSON to `/predict_stream` to process multiple payloads in one request.
+  ```
+  printf '%s\n%s\n' '{"sodium":133,...}' '{"sodium":130,...}' | \
+    curl -s -X POST http://localhost:8000/predict_stream -H "Content-Type: application/json" --data-binary @-
+  ```
+  Each line is parsed independently; the response is a JSON array of per-line results.
+
 Responses are JSON with prediction probabilities/predicted classes (and mix ratios when compatible with the xgboost version).
