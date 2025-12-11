@@ -1,0 +1,26 @@
+FROM rocker/tidyverse:4.4.2
+
+# System deps for building lightgbm
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      cmake \
+      libssl-dev \
+      libcurl4-openssl-dev \
+      libgit2-dev \
+      libgomp1 \
+      libsodium-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV RENV_PATHS_CACHE=/root/.cache/R/renv
+WORKDIR /app
+
+COPY renv.lock renv.lock
+COPY renv/ renv/
+RUN R -q -e "install.packages('renv', repos = 'https://cloud.r-project.org'); renv::restore(clean = TRUE, repos = c(CRAN = 'https://packagemanager.posit.co/cran/latest'))"
+RUN R -q -e "install.packages(c('lightgbm','probably'), repos = 'https://cloud.r-project.org')"
+
+COPY scripts ./scripts
+COPY data ./data
+
+ENTRYPOINT ["Rscript", "scripts/train_cbc_models.R"]
