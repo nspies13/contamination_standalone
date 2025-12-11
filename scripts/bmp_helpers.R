@@ -73,7 +73,8 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
       assign(
         "xgb.load.raw",
         function(raw, as_booster = TRUE, ...) {
-          orig(raw, as_booster = as_booster, ...)
+          # Preserve compatibility with old models that pass as_booster
+          orig(raw, ...)
         },
         envir = ns
       )
