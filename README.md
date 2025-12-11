@@ -9,13 +9,9 @@ Stand-alone contamination models with Docker images and scripts.
 - Apple Silicon: add `--platform linux/amd64` to `docker pull` / `docker run`.
 
 ## Minimal JSON APIs
-The images now only load the bundled models and expose a REST API:
+Load the bundled models and expose a REST API:
 - BMP: `docker run --rm -p 8000:8000 -e HOST=0.0.0.0 -e PORT=8000 nspies13/contamination-bmp:latest`
 - CBC: `docker run --rm -p 8002:8000 -e HOST=0.0.0.0 -e PORT=8000 nspies13/contamination-cbc:latest`
-
-Model paths (optional overrides):
-- BMP: `BMP_MODEL_PATH` (default `models/bmp_models_combined.RDS`), `BMP_MIX_MODEL_PATH` (default `models/bmp_mix_ratio_models_combined.RDS`)
-- CBC: `CBC_MODEL_PATH` (default `models/cbc_models_combined.RDS`), `CBC_MIX_MODEL_PATH` (default `models/cbc_mix_ratio_model.RDS`)
 
 ### Example payloads
 - BMP (wide JSON): see `data/bmp_test_wide.csv` for column names; send JSON array of objects with those columns.
