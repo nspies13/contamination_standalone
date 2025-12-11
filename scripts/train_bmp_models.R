@@ -89,9 +89,7 @@ makeSimulatedBinaryTrainingData <- function(train_input, fluid_row) {
   sim_rows[, names(tmp)] <- tmp
 
   bind_rows(input_uncontam, sim_rows) %>%
-    mutate(
-      target = factor(label, levels = c("Patient", fluid_row[["fluid"]]), labels = c("0", "1"))
-    ) %>%
+    mutate(target = factor(if_else(label == "Patient", "0", "1"), levels = c("0", "1"))) %>%
     select(
       target,
       all_of(lab_strings_bmp_no_gap),

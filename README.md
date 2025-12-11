@@ -5,6 +5,7 @@ Stand-alone contamination models with Docker images and scripts.
 - BMP runtime: `docker pull nspies13/contamination-bmp:latest`
 - CBC runtime: `docker pull nspies13/contamination-cbc:latest`
 - BMP training (no bundled models): `docker pull nspies13/contamination-bmp-train:latest`
+- CBC training (no bundled models): `docker pull nspies13/contamination-cbc-train:latest`
 - Apple Silicon: add `--platform linux/amd64` to `docker pull` / `docker run`.
 
 ## Minimal JSON APIs
@@ -39,3 +40,7 @@ Model paths (optional overrides):
   Each line is parsed independently; the response is a JSON array of per-line results.
 
 Responses are JSON with prediction probabilities/predicted classes (and mix ratios when compatible with the xgboost version).
+
+## Training images
+- BMP training: `docker run --rm -v "$PWD/data:/data" -v "$PWD/tmp_outputs:/outputs" nspies13/contamination-bmp-train:latest /data/bmp_test_wide.csv /data/fluid_concentrations.tsv /outputs/bmp_models_combined.RDS`
+- CBC training: `docker run --rm -v "$PWD/data:/data" -v "$PWD/tmp_outputs:/outputs" nspies13/contamination-cbc-train:latest /data/cbc_test_wide.csv /outputs/cbc_models_combined.RDS /outputs/cbc_mix_ratio_model.RDS`
