@@ -15,6 +15,23 @@ load_models <- function() {
   )
 }
 
+run_batch <- function(input_file, output_file, models) {
+  if (is.null(input_file) || is.null(output_file)) {
+    stop("Batch mode requires --input-file and --output-file")
+  }
+
+  input <- read_csv(input_file, show_col_types = FALSE, progress = FALSE)
+  preds <- makeBmpPredictions(
+    input_raw = input,
+    models_combined = models$models_combined,
+    mix_ratio_models = models$mix_ratio_models
+  )
+  extra_cols <- setdiff(names(preds), names(input))
+  output <- bind_cols(input, preds[, extra_cols, drop = FALSE])
+  write_csv(output, output_file)
+  message("Wrote BMP predictions to ", output_file)
+}
+
 start_api <- function(host, port, models) {
   router <- pr()
 
@@ -96,11 +113,39 @@ start_api <- function(host, port, models) {
 }
 
 main <- function() {
-  host <- Sys.getenv("HOST", "0.0.0.0")
-  port <- as.integer(Sys.getenv("PORT", "8000"))
+  args <- list(
+    mode = Sys.getenv("MODE", "api"),
+    host = Sys.getenv("HOST", "0.0.0.0"),
+    port = as.integer(Sys.getenv("PORT", "8000")),
+    input_file = NULL,
+    output_file = NULL
+  )
+
+  cli_args <- commandArgs(trailingOnly = TRUE)
+  i <- 1
+  while (i <= length(cli_args)) {
+    flag <- cli_args[[i]]
+    value <- cli_args[[i + 1]]
+    if (flag %in% c("--mode", "-m")) {
+      args$mode <- value
+      i <- i + 2
+    } else if (flag %in% c("--input-file", "-f")) {
+      args$input_file <- value
+      i <- i + 2
+    } else if (flag %in% c("--output-file", "-o")) {
+      args$output_file <- value
+      i <- i + 2
+    } else {
+      i <- i + 1
+    }
+  }
 
   models <- load_models()
-  start_api(host, port, models)
+  if (identical(args$mode, "batch")) {
+    run_batch(args$input_file, args$output_file, models)
+  } else {
+    start_api(args$host, args$port, models)
+  }
 }
 
 main()

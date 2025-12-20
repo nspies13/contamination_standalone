@@ -37,6 +37,10 @@ Load the bundled models and expose a REST API:
 
 Responses are JSON with prediction probabilities/predicted classes (and mix ratios when I fix the versioning error).
 
+### Batch CLI mode (CSV -> CSV with predictions appended)
+- BMP: `docker run --rm -v "$PWD/data:/data" nspies13/contamination-bmp:latest --mode batch --input-file /data/bmp_test_wide.csv --output-file /data/bmp_predictions.csv`
+- CBC: `docker run --rm -v "$PWD/data:/data" nspies13/contamination-cbc:latest --mode batch --input-file /data/cbc_test_wide.csv --output-file /data/cbc_predictions.csv`
+
 ## Training images
 - BMP training: `docker run --rm -v "$PWD/data:/data" -v "$PWD/tmp_outputs:/outputs" nspies13/contamination-bmp-train:latest /data/bmp_test_wide.csv /data/fluid_concentrations.tsv /outputs/bmp_models_combined.RDS`
 - CBC training: `docker run --rm -v "$PWD/data:/data" -v "$PWD/tmp_outputs:/outputs" nspies13/contamination-cbc-train:latest /data/cbc_test_wide.csv /outputs/cbc_models_combined.RDS /outputs/cbc_mix_ratio_model.RDS`
