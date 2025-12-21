@@ -66,17 +66,22 @@ safe_read_rds <- function(path) {
 source(file.path(root, "scripts", "bmp_helpers.R"))
 source(file.path(root, "scripts", "cbc_helpers.R"))
 
-bmp_models <- list(
-  models_combined = safe_read_rds(model_path("BMP_MODEL_PATH", file.path(root, "models/bmp_models_combined.RDS"))),
-  mix_ratio_models = safe_read_rds(model_path("BMP_MIX_MODEL_PATH", file.path(root, "models/bmp_mix_ratio_models_combined.RDS")))
-)
-cbc_models <- list(
-  models_combined = safe_read_rds(model_path("CBC_MODEL_PATH", file.path(root, "models/cbc_models_combined.RDS"))),
-  mix_ratio_workflows = safe_read_rds(model_path("CBC_MIX_MODEL_PATH", file.path(root, "models/cbc_mix_ratio_model.RDS")))
-)
+load_bmp_models <- function() {
+  list(
+    models_combined = safe_read_rds(model_path("BMP_MODEL_PATH", file.path(root, "models/bmp_models_combined.RDS"))),
+    mix_ratio_models = safe_read_rds(model_path("BMP_MIX_MODEL_PATH", file.path(root, "models/bmp_mix_ratio_models_combined.RDS")))
+  )
+}
 
-bmp_fluids <- bmp_models$models_combined |> map_chr("fluid") |> unique()
+load_cbc_models <- function() {
+  list(
+    models_combined = safe_read_rds(model_path("CBC_MODEL_PATH", file.path(root, "models/cbc_models_combined.RDS"))),
+    mix_ratio_workflows = safe_read_rds(model_path("CBC_MIX_MODEL_PATH", file.path(root, "models/cbc_mix_ratio_model.RDS")))
+  )
+}
+
 bmp_fluids_tbl <- read_delim(file.path(root, "data", "fluid_concentrations.tsv"), delim = "\t", show_col_types = FALSE)
+bmp_fluids <- bmp_fluids_tbl$fluid
 
 read_upload <- function(fileinfo) {
   req(fileinfo)
@@ -192,10 +197,13 @@ server <- function(input, output, session) {
   train_fluids_tbl <- reactiveVal(bmp_fluids_tbl)
   trained_models_paths <- reactiveValues(BMP = NULL, CBC = NULL)
   trained_models_ready <- reactiveValues(BMP = FALSE, CBC = FALSE)
+  trained_models_stamp <- reactiveValues(BMP = NULL, CBC = NULL)
   train_preview <- reactiveVal(NULL)
   review_df <- reactiveVal(NULL)
   review_index <- reactiveVal(1)
   review_save_path <- reactiveVal(NULL)
+  bmp_models_cache <- reactiveVal(NULL)
+  cbc_models_cache <- reactiveVal(NULL)
   clear_outputs <- function() {
     preds(NULL)
     train_preview(NULL)
@@ -434,13 +442,26 @@ server <- function(input, output, session) {
     }
 
     if (input$dataset == "BMP") {
-      models_combined <- bmp_models$models_combined
-      mix_models <- bmp_models$mix_ratio_models
-      if (!is.null(input$bmp_model_file)) {
-        models_combined <- tryCatch(safe_read_rds(input$bmp_model_file$datapath), error = function(e) e)
+      use_defaults <- is.null(input$bmp_model_file) || is.null(input$bmp_mix_model_file)
+      if (use_defaults && is.null(bmp_models_cache())) {
+        status_text("Loading BMP models...")
+        bmp_defaults <- tryCatch(load_bmp_models(), error = function(e) e)
+        if (inherits(bmp_defaults, "error")) {
+          status_text(paste("Model load error:", bmp_defaults$message))
+          preds(NULL)
+          return()
+        }
+        bmp_models_cache(bmp_defaults)
       }
-      if (!is.null(input$bmp_mix_model_file)) {
-        mix_models <- tryCatch(safe_read_rds(input$bmp_mix_model_file$datapath), error = function(e) e)
+      models_combined <- if (is.null(input$bmp_model_file)) {
+        bmp_models_cache()$models_combined
+      } else {
+        tryCatch(safe_read_rds(input$bmp_model_file$datapath), error = function(e) e)
+      }
+      mix_models <- if (is.null(input$bmp_mix_model_file)) {
+        bmp_models_cache()$mix_ratio_models
+      } else {
+        tryCatch(safe_read_rds(input$bmp_mix_model_file$datapath), error = function(e) e)
       }
       if (inherits(models_combined, "error")) {
         status_text(paste("Custom model error:", models_combined$message))
@@ -460,13 +481,26 @@ server <- function(input, output, session) {
         error = function(e) e
       )
     } else {
-      models_combined <- cbc_models$models_combined
-      mix_models <- cbc_models$mix_ratio_workflows
-      if (!is.null(input$cbc_model_file)) {
-        models_combined <- tryCatch(safe_read_rds(input$cbc_model_file$datapath), error = function(e) e)
+      use_defaults <- is.null(input$cbc_model_file) || is.null(input$cbc_mix_model_file)
+      if (use_defaults && is.null(cbc_models_cache())) {
+        status_text("Loading CBC models...")
+        cbc_defaults <- tryCatch(load_cbc_models(), error = function(e) e)
+        if (inherits(cbc_defaults, "error")) {
+          status_text(paste("Model load error:", cbc_defaults$message))
+          preds(NULL)
+          return()
+        }
+        cbc_models_cache(cbc_defaults)
       }
-      if (!is.null(input$cbc_mix_model_file)) {
-        mix_models <- tryCatch(safe_read_rds(input$cbc_mix_model_file$datapath), error = function(e) e)
+      models_combined <- if (is.null(input$cbc_model_file)) {
+        cbc_models_cache()$models_combined
+      } else {
+        tryCatch(safe_read_rds(input$cbc_model_file$datapath), error = function(e) e)
+      }
+      mix_models <- if (is.null(input$cbc_mix_model_file)) {
+        cbc_models_cache()$mix_ratio_workflows
+      } else {
+        tryCatch(safe_read_rds(input$cbc_mix_model_file$datapath), error = function(e) e)
       }
       if (inherits(models_combined, "error")) {
         status_text(paste("Custom model error:", models_combined$message))
@@ -530,7 +564,8 @@ server <- function(input, output, session) {
       tbl <- tbl |> filter(fluid %in% include)
       fluids_file <- tempfile("fluids_", fileext = ".csv")
       readr::write_csv(tbl, fluids_file)
-      out_file <- tempfile("bmp_models_", fileext = ".RDS")
+      stamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+      out_file <- tempfile(paste0("bmp_models_", stamp, "_"), fileext = ".RDS")
       res <- tryCatch({
         run_in_root(system2(
           "Rscript",
@@ -549,10 +584,12 @@ server <- function(input, output, session) {
       }
       trained_models_paths$BMP <- out_file
       trained_models_ready$BMP <- TRUE
+      trained_models_stamp$BMP <- stamp
       status_text("BMP models trained.")
       session$sendCustomMessage("triggerDownload", list(id = "download_trained_models"))
     } else {
-      out_file <- tempfile("cbc_models_", fileext = ".RDS")
+      stamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+      out_file <- tempfile(paste0("cbc_models_", stamp, "_"), fileext = ".RDS")
       res <- tryCatch({
         run_in_root(system2(
           "Rscript",
@@ -571,6 +608,7 @@ server <- function(input, output, session) {
       }
       trained_models_paths$CBC <- out_file
       trained_models_ready$CBC <- TRUE
+      trained_models_stamp$CBC <- stamp
       status_text("CBC models trained.")
       session$sendCustomMessage("triggerDownload", list(id = "download_trained_models"))
     }
@@ -667,9 +705,19 @@ server <- function(input, output, session) {
   output$download_trained_models <- downloadHandler(
     filename = function() {
       if (input$dataset == "BMP") {
-        "bmp_models_combined.RDS"
+        stamp <- trained_models_stamp$BMP
+        if (is.null(stamp)) {
+          "bmp_models_combined.RDS"
+        } else {
+          paste0("bmp_models_combined_", stamp, ".RDS")
+        }
       } else {
-        "cbc_models_combined.RDS"
+        stamp <- trained_models_stamp$CBC
+        if (is.null(stamp)) {
+          "cbc_models_combined.RDS"
+        } else {
+          paste0("cbc_models_combined_", stamp, ".RDS")
+        }
       }
     },
     content = function(file) {
