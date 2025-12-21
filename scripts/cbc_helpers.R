@@ -34,6 +34,16 @@ preprocessCBCData <- function(data_long = read_csv("cbc_test_long.csv"), collect
     ungroup()
 }
 
+label_pred_class <- function(x) {
+  x <- as.character(x)
+  case_when(
+    x == "0" ~ "Real",
+    x == "1" ~ "Contaminated",
+    x == "[EQ]" ~ "Equivocal",
+    TRUE ~ x
+  )
+}
+
 makeCbcPredictions <- function(
   input_raw = read_csv("data/cbc_test_wide.csv"),
   models_combined = read_rds("models/cbc_models_combined.RDS"),
@@ -55,7 +65,8 @@ makeCbcPredictions <- function(
     pmap(list(workflows, types), function(workflow, type) {
       predict(workflow, input) |> set_names(paste0("pred_", type, "_CBC"))
     }) |>
-    bind_cols()
+    bind_cols() |>
+    mutate(across(starts_with("pred_"), label_pred_class))
 
   probs <-
     pmap(list(workflows, types), function(workflow, type) {
@@ -75,8 +86,16 @@ makeCbcPredictions <- function(
   output_no_NA <-
     output |>
     mutate(
-      across(matches("Realtime"), ~ ifelse(num_NA_realtime > 0, NA, .)),
-      across(matches("Retro|mix"), ~ ifelse(num_NA_retro > 0, NA, .))) |> 
+      across(matches("^pred_Realtime"), ~ ifelse(num_NA_realtime > 0, NA, .)),
+      across(matches("^pred_Retro"), ~ ifelse(num_NA_retro > 0, NA, .)),
+      across(matches("^prob_Realtime"), ~ ifelse(num_NA_realtime > 0, NA, .)),
+      across(matches("^prob_Retro"), ~ ifelse(num_NA_retro > 0, NA, .)),
+      across(matches("mix_ratio"), ~ ifelse(num_NA_retro > 0, NA, .))
+    ) |>
+    mutate(
+      across(matches("^pred_Realtime"), ~ ifelse(is.na(.) & num_NA_realtime == 0, "Equivocal", .)),
+      across(matches("^pred_Retro"), ~ ifelse(is.na(.) & num_NA_retro == 0, "Equivocal", .))
+    ) |>
     select(-matches("num_NA"))
 
   output_no_NA

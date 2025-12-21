@@ -1,5 +1,16 @@
 lab_strings <- c("sodium", "chloride", "potassium_plas", "co2_totl", "bun", "creatinine", "calcium", "glucose")
 
+label_pred_class <- function(x) {
+  
+  out <- as.character(x)
+  out[which(out == "0")] <- "Real"
+  out[which_equivocal(x)] <- "Equivocal"
+  out[which(out == "1")] <- "Contaminated"
+
+  out
+
+}
+
 rectangularizeResults <- function(input, label = "", fn = last) {
   
   input <- input |> mutate(RESULT_VALUE = as.numeric(str_replace_all(RESULT_VALUE, "<|>", "")))
@@ -60,30 +71,6 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
   library(tidyverse)
   library(tidymodels)
   cur_column <- dplyr::cur_column
-  
-  shim_xgb_load_raw <- function() {
-    if (!requireNamespace("xgboost", quietly = TRUE)) {
-      return(invisible())
-    }
-
-    ns <- asNamespace("xgboost")
-    if (exists("xgb.load.raw", envir = ns, inherits = FALSE)) {
-      orig <- get("xgb.load.raw", envir = ns, inherits = FALSE)
-      unlockBinding("xgb.load.raw", ns)
-      assign(
-        "xgb.load.raw",
-        function(raw, as_booster = TRUE, ...) {
-          # Preserve compatibility with old models that pass as_booster
-          orig(raw, ...)
-        },
-        envir = ns
-      )
-      lockBinding("xgb.load.raw", ns)
-    }
-  }
-  
-  # xgboost 2.x removed the as_booster argument; patch it back for bundled models
-  shim_xgb_load_raw()
 
   input <- input_raw |>
     select(any_of(lab_strings), matches("prior|post")) |>
@@ -96,13 +83,16 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
   types <- models_combined |> map("type")
   
   preds <- 
-    pmap(list(workflows, fluids, types), function(workflow, fluid, type) predict(workflow, input) |> set_names(paste0("pred_", type, "_", fluid))) |> 
-    bind_cols() |> 
+    pmap(list(workflows, fluids, types), function(workflow, fluid, type) {
+      predict(workflow, input) |> set_names(paste0("pred_", type, "_", fluid))
+    }) |>
+    bind_cols() |>
+    mutate(across(starts_with("pred_"), label_pred_class)) |>
     mutate(
-      any_realtime_pred = factor(if_any(matches("pred_Realtime") & !matches("LR"), ~ . == "1")),
-      any_retrospective_pred = factor(if_any(matches("pred_Retrospective") & !matches("LR"), ~ . == "1")),
-      any_realtime_pred_with_LR = factor(if_any(matches("pred_Realtime"), ~ . == "1")),
-      any_retrospective_pred_with_LR = factor(if_any(matches("pred_Retrospective"), ~ . == "1")))
+      any_realtime_pred = factor(if_any(matches("pred_Realtime") & !matches("LR"), ~ coalesce(. == "Contaminated", FALSE))),
+      any_retrospective_pred = factor(if_any(matches("pred_Retrospective") & !matches("LR"), ~ coalesce(. == "Contaminated", FALSE))),
+      any_realtime_pred_with_LR = factor(if_any(matches("pred_Realtime"), ~ coalesce(. == "Contaminated", FALSE))),
+      any_retrospective_pred_with_LR = factor(if_any(matches("pred_Retrospective"), ~ coalesce(. == "Contaminated", FALSE))))
 
   probs <- suppressWarnings(
     pmap(list(workflows, fluids, types), function(workflow, fluid, type) {
@@ -137,7 +127,6 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
   )
   
   mix_ratios <- tryCatch({
-    shim_xgb_load_raw()
     mix_ratio_workflows <- mix_ratio_models |>
       map("workflow") |>
       map(bundle::unbundle)
@@ -162,10 +151,36 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
   
   output_no_NA <-
     output |>
-      mutate(
-        across(matches("Realtime"), ~ ifelse(num_NA_realtime > 0, NA, .)),
-        across(matches("mix_ratio|Retro"), ~ifelse(num_NA_retro > 0, NA, .))) |>
-      select(-matches("num_NA"))
+    mutate(
+      across(matches("^pred_Realtime"), ~ ifelse(num_NA_realtime > 0, NA, .)),
+      across(matches("^pred_Retro"), ~ ifelse(num_NA_retro > 0, NA, .)),
+      across(matches("^prob_Realtime"), ~ ifelse(num_NA_realtime > 0, NA, .)),
+      across(matches("^prob_Retro"), ~ ifelse(num_NA_retro > 0, NA, .)),
+      across(matches("mix_ratio"), ~ ifelse(num_NA_retro > 0, NA, .))
+    ) |>
+    mutate(
+      across(matches("^pred_Realtime"), ~ ifelse(is.na(.) & num_NA_realtime == 0, "Equivocal", .)),
+      across(matches("^pred_Retro"), ~ ifelse(is.na(.) & num_NA_retro == 0, "Equivocal", .))
+    ) |>
+    mutate(
+      any_realtime_pred = factor(if_any(
+        matches("^pred_Realtime") & !matches("LR"),
+        ~ coalesce(. == "Contaminated", FALSE)
+      )),
+      any_retrospective_pred = factor(if_any(
+        matches("^pred_Retrospective") & !matches("LR"),
+        ~ coalesce(. == "Contaminated", FALSE)
+      )),
+      any_realtime_pred_with_LR = factor(if_any(
+        matches("^pred_Realtime"),
+        ~ coalesce(. == "Contaminated", FALSE)
+      )),
+      any_retrospective_pred_with_LR = factor(if_any(
+        matches("^pred_Retrospective"),
+        ~ coalesce(. == "Contaminated", FALSE)
+      ))
+    ) |>
+    select(-matches("num_NA"))
 
   output_no_NA 
   

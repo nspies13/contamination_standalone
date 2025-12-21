@@ -6,6 +6,7 @@ Stand-alone contamination models with Docker images and scripts.
 - CBC runtime: `docker pull nspies13/contamination-cbc:latest`
 - BMP training (no bundled models): `docker pull nspies13/contamination-bmp-train:latest`
 - CBC training (no bundled models): `docker pull nspies13/contamination-cbc-train:latest`
+- Web UI (Shiny): build locally with `docker build -f Dockerfile.app -t contamination-app:latest .`
 - Apple Silicon: add `--platform linux/amd64` to `docker pull` / `docker run`.
 
 ## Minimal JSON APIs
@@ -44,3 +45,24 @@ Responses are JSON with prediction probabilities/predicted classes (and mix rati
 ## Training images
 - BMP training: `docker run --rm -v "$PWD/data:/data" -v "$PWD/tmp_outputs:/outputs" nspies13/contamination-bmp-train:latest /data/bmp_test_wide.csv /data/fluid_concentrations.tsv /outputs/bmp_models_combined.RDS`
 - CBC training: `docker run --rm -v "$PWD/data:/data" -v "$PWD/tmp_outputs:/outputs" nspies13/contamination-cbc-train:latest /data/cbc_test_wide.csv /outputs/cbc_models_combined.RDS /outputs/cbc_mix_ratio_model.RDS`
+
+## FluidFlagger app (Shiny)
+- Build: `docker build --platform linux/amd64 -f Dockerfile.app -t contamination-app:latest .`
+- Run: `docker run --rm -p 8000:8000 contamination-app:latest`
+- Open: `http://localhost:8000`
+
+### Predict mode
+- Choose BMP or CBC, upload a wide CSV/TSV, preview, and download predictions.
+- BMP-only: filter which fluids to include.
+- Optional: upload custom model RDS files (combined models, and mix-ratio models).
+
+### Train mode
+- Upload a training template CSV/TSV and train models directly in the app.
+- BMP-only: select fluids, add a new fluid with analyte concentrations.
+- Download the trained model RDS after training completes (auto-download is enabled).
+- Mix ratio models are skipped in this mode.
+
+### Review mode
+- Upload a review CSV/TSV, label each row as Real/Contaminated/Equivocal.
+- Labels are saved to `results/<input_basename>_labels.csv` with the original columns plus `label`, `labeler`, and `timestamp`.
+- Download labels at any time from the UI.

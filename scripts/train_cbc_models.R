@@ -10,15 +10,19 @@ library(butcher)
 # - output_mix_rds: default models/cbc_mix_ratio_model.RDS
 
 args <- commandArgs(trailingOnly = TRUE)
+no_mix <- "--no-mix" %in% args
+args <- args[args != "--no-mix"]
 if (length(args) < 1) {
-  stop("Usage: Rscript scripts/train_cbc_models.R <training_template.csv> [output_models_rds] [output_mix_rds]")
+  stop("Usage: Rscript scripts/train_cbc_models.R <training_template.csv> [output_models_rds] [output_mix_rds] [--no-mix]")
 }
 
 template_path <- args[[1]]
 models_out <- ifelse(length(args) >= 2, args[[2]], "models/cbc_models_combined.RDS")
 mix_out <- ifelse(length(args) >= 3, args[[3]], "models/cbc_mix_ratio_model.RDS")
 dir.create(dirname(models_out), recursive = TRUE, showWarnings = FALSE)
-dir.create(dirname(mix_out), recursive = TRUE, showWarnings = FALSE)
+if (!no_mix) {
+  dir.create(dirname(mix_out), recursive = TRUE, showWarnings = FALSE)
+}
 
 data <- readr::read_csv(template_path, show_col_types = FALSE)
 
@@ -91,9 +95,13 @@ train_mix_model <- function(train_df) {
 train_df <- make_binary_training(data)
 
 models_combined <- train_class_models(train_df)
-mix_workflow <- train_mix_model(train_df)
+mix_workflow <- if (no_mix) NULL else train_mix_model(train_df)
 
 write_rds(models_combined, models_out)
-write_rds(mix_workflow, mix_out)
+if (!no_mix) {
+  write_rds(mix_workflow, mix_out)
+}
 message("Wrote CBC models to: ", models_out)
-message("Wrote CBC mix model to: ", mix_out)
+if (!no_mix) {
+  message("Wrote CBC mix model to: ", mix_out)
+}
