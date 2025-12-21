@@ -18,7 +18,7 @@ WORKDIR /app
 COPY renv.lock renv.lock
 COPY renv/ renv/
 RUN R -q -e "install.packages('renv', repos = 'https://cloud.r-project.org'); renv::restore(clean = TRUE, repos = c(CRAN = 'https://packagemanager.posit.co/cran/latest'))"
-RUN R -q -e "install.packages(c('shiny','lightgbm','probably'), repos = 'https://cloud.r-project.org')"
+RUN R -q -e "install.packages(c('shiny','lightgbm','probably','DT'), repos = 'https://cloud.r-project.org')"
 
 COPY models ./models
 COPY scripts ./scripts

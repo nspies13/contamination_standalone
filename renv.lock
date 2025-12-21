@@ -58,6 +58,44 @@
       "Maintainer": "Kirill Müller <kirill@cynkra.com>",
       "Repository": "CRAN"
     },
+    "DT": {
+      "Package": "DT",
+      "Version": "0.34.0",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "A Wrapper of the JavaScript Library 'DataTables'",
+      "Authors@R": "c( person(\"Yihui\", \"Xie\", role = \"aut\"), person(\"Joe\", \"Cheng\", , \"joe@posit.co\", role = \"aut\"), person(\"Xianying\", \"Tan\", role = \"aut\"), person(\"Garrick\", \"Aden-Buie\", , \"garrick@posit.co\", role = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0002-7111-0077\")), person(\"JJ\", \"Allaire\", role = \"ctb\"), person(\"Maximilian\", \"Girlich\", role = \"ctb\"), person(\"Greg\", \"Freedman Ellis\", role = \"ctb\"), person(\"Johannes\", \"Rauh\", role = \"ctb\"), person(\"SpryMedia Limited\", role = c(\"ctb\", \"cph\"), comment = \"DataTables in htmlwidgets/lib\"), person(\"Brian\", \"Reavis\", role = c(\"ctb\", \"cph\"), comment = \"selectize.js in htmlwidgets/lib\"), person(\"Leon\", \"Gersen\", role = c(\"ctb\", \"cph\"), comment = \"noUiSlider in htmlwidgets/lib\"), person(\"Bartek\", \"Szopka\", role = c(\"ctb\", \"cph\"), comment = \"jquery.highlight.js in htmlwidgets/lib\"), person(\"Alex\", \"Pickering\", role = \"ctb\"), person(\"William\", \"Holmes\", role = \"ctb\"), person(\"Mikko\", \"Marttila\", role = \"ctb\"), person(\"Andres\", \"Quintero\", role = \"ctb\"), person(\"Stéphane\", \"Laurent\", role = \"ctb\"), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")) )",
+      "Description": "Data objects in R can be rendered as HTML tables using the JavaScript library 'DataTables' (typically via R Markdown or Shiny). The 'DataTables' library has been included in this R package. The package name 'DT' is an abbreviation of 'DataTables'.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://github.com/rstudio/DT",
+      "BugReports": "https://github.com/rstudio/DT/issues",
+      "Imports": [
+        "crosstalk",
+        "htmltools (>= 0.3.6)",
+        "htmlwidgets (>= 1.3)",
+        "jquerylib",
+        "jsonlite (>= 0.9.16)",
+        "magrittr",
+        "promises"
+      ],
+      "Suggests": [
+        "bslib",
+        "future",
+        "httpuv",
+        "knitr (>= 1.8)",
+        "rmarkdown",
+        "shiny (>= 1.6)",
+        "testit",
+        "tibble"
+      ],
+      "VignetteBuilder": "knitr",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2",
+      "NeedsCompilation": "no",
+      "Author": "Yihui Xie [aut], Joe Cheng [aut], Xianying Tan [aut], Garrick Aden-Buie [aut, cre] (ORCID: <https://orcid.org/0000-0002-7111-0077>), JJ Allaire [ctb], Maximilian Girlich [ctb], Greg Freedman Ellis [ctb], Johannes Rauh [ctb], SpryMedia Limited [ctb, cph] (DataTables in htmlwidgets/lib), Brian Reavis [ctb, cph] (selectize.js in htmlwidgets/lib), Leon Gersen [ctb, cph] (noUiSlider in htmlwidgets/lib), Bartek Szopka [ctb, cph] (jquery.highlight.js in htmlwidgets/lib), Alex Pickering [ctb], William Holmes [ctb], Mikko Marttila [ctb], Andres Quintero [ctb], Stéphane Laurent [ctb], Posit Software, PBC [cph, fnd]",
+      "Maintainer": "Garrick Aden-Buie <garrick@posit.co>",
+      "Repository": "CRAN"
+    },
     "DiceDesign": {
       "Package": "DiceDesign",
       "Version": "1.10",
@@ -210,6 +248,28 @@
       "Maintainer": "Martin Maechler <mmaechler+Matrix@gmail.com>",
       "Repository": "CRAN"
     },
+    "PKI": {
+      "Package": "PKI",
+      "Version": "0.1-15",
+      "Source": "Repository",
+      "Title": "Public Key Infrastucture for R Based on the X.509 Standard",
+      "Authors@R": "person(\"Simon\", \"Urbanek\", role=c(\"aut\",\"cre\",\"cph\"), email=\"Simon.Urbanek@r-project.org\", comment=c(\"https://urbanek.nz\", ORCID=\"0000-0003-2297-1732\"))",
+      "Maintainer": "Simon Urbanek <Simon.Urbanek@r-project.org>",
+      "Depends": [
+        "R (>= 2.9.0)",
+        "base64enc"
+      ],
+      "Enhances": [
+        "gmp"
+      ],
+      "Description": "Public Key Infrastucture functions such as verifying certificates, RSA encription and signing which can be used to build PKI infrastructure and perform cryptographic tasks.",
+      "License": "GPL-2 | GPL-3 | file LICENSE",
+      "URL": "http://www.rforge.net/PKI",
+      "SystemRequirements": "OpenSSL library and headers (openssl-dev or similar)",
+      "NeedsCompilation": "yes",
+      "Author": "Simon Urbanek [aut, cre, cph] (https://urbanek.nz, ORCID: <https://orcid.org/0000-0003-2297-1732>)",
+      "Repository": "CRAN"
+    },
     "R6": {
       "Package": "R6",
       "Version": "2.6.1",
@@ -279,6 +339,36 @@
       "Encoding": "UTF-8",
       "NeedsCompilation": "yes",
       "Author": "Dirk Eddelbuettel [aut, cre] (ORCID: <https://orcid.org/0000-0001-6419-907X>), Romain Francois [aut] (ORCID: <https://orcid.org/0000-0002-2444-4226>), JJ Allaire [aut] (ORCID: <https://orcid.org/0000-0003-0174-9868>), Kevin Ushey [aut] (ORCID: <https://orcid.org/0000-0003-2880-7407>), Qiang Kou [aut] (ORCID: <https://orcid.org/0000-0001-6786-5453>), Nathan Russell [aut], Iñaki Ucar [aut] (ORCID: <https://orcid.org/0000-0001-6403-5550>), Doug Bates [aut] (ORCID: <https://orcid.org/0000-0001-8316-9503>), John Chambers [aut]",
+      "Maintainer": "Dirk Eddelbuettel <edd@debian.org>",
+      "Repository": "CRAN"
+    },
+    "RcppTOML": {
+      "Package": "RcppTOML",
+      "Version": "0.2.3",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "'Rcpp' Bindings to Parser for \"Tom's Obvious Markup Language\"",
+      "Date": "2025-03-08",
+      "Authors@R": "c(person(\"Dirk\", \"Eddelbuettel\", role = c(\"aut\", \"cre\"), email = \"edd@debian.org\", comment = c(ORCID = \"0000-0001-6419-907X\")), person(\"Mark\", \"Gillard\", role = \"aut\", comment = \"Author of 'toml++' header library\"))",
+      "Description": "The configuration format defined by 'TOML' (which expands to \"Tom's Obvious Markup Language\") specifies an excellent format (described at <https://toml.io/en/>) suitable for both human editing as well as the common uses of a machine-readable format. This package uses 'Rcpp' to connect to the 'toml++' parser written by Mark Gillard to R.",
+      "SystemRequirements": "A C++17 compiler",
+      "BugReports": "https://github.com/eddelbuettel/rcpptoml/issues",
+      "URL": "http://dirk.eddelbuettel.com/code/rcpp.toml.html",
+      "Imports": [
+        "Rcpp (>= 1.0.8)"
+      ],
+      "Depends": [
+        "R (>= 3.3.0)"
+      ],
+      "LinkingTo": [
+        "Rcpp"
+      ],
+      "Suggests": [
+        "tinytest"
+      ],
+      "License": "GPL (>= 2)",
+      "NeedsCompilation": "yes",
+      "Author": "Dirk Eddelbuettel [aut, cre] (<https://orcid.org/0000-0001-6419-907X>), Mark Gillard [aut] (Author of 'toml++' header library)",
       "Maintainer": "Dirk Eddelbuettel <edd@debian.org>",
       "Repository": "CRAN"
     },
@@ -1271,6 +1361,38 @@
       "NeedsCompilation": "no",
       "Author": "Gábor Csárdi [aut, cre], Brodie Gaslam [ctb], Posit Software, PBC [cph, fnd]",
       "Maintainer": "Gábor Csárdi <csardi.gabor@gmail.com>",
+      "Repository": "CRAN"
+    },
+    "crosstalk": {
+      "Package": "crosstalk",
+      "Version": "1.2.2",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Inter-Widget Interactivity for HTML Widgets",
+      "Authors@R": "c( person(\"Joe\", \"Cheng\", , \"joe@posit.co\", role = \"aut\"), person(\"Carson\", \"Sievert\", , \"carson@posit.co\", role = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0002-4958-2844\")), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")), person(, \"jQuery Foundation\", role = \"cph\", comment = \"jQuery library and jQuery UI library\"), person(, \"jQuery contributors\", role = c(\"ctb\", \"cph\"), comment = \"jQuery library; authors listed in inst/www/shared/jquery-AUTHORS.txt\"), person(\"Mark\", \"Otto\", role = \"ctb\", comment = \"Bootstrap library\"), person(\"Jacob\", \"Thornton\", role = \"ctb\", comment = \"Bootstrap library\"), person(, \"Bootstrap contributors\", role = \"ctb\", comment = \"Bootstrap library\"), person(, \"Twitter, Inc\", role = \"cph\", comment = \"Bootstrap library\"), person(\"Brian\", \"Reavis\", role = c(\"ctb\", \"cph\"), comment = \"selectize.js library\"), person(\"Kristopher Michael\", \"Kowal\", role = c(\"ctb\", \"cph\"), comment = \"es5-shim library\"), person(, \"es5-shim contributors\", role = c(\"ctb\", \"cph\"), comment = \"es5-shim library\"), person(\"Denis\", \"Ineshin\", role = c(\"ctb\", \"cph\"), comment = \"ion.rangeSlider library\"), person(\"Sami\", \"Samhuri\", role = c(\"ctb\", \"cph\"), comment = \"Javascript strftime library\") )",
+      "Description": "Provides building blocks for allowing HTML widgets to communicate with each other, with Shiny or without (i.e. static .html files). Currently supports linked brushing and filtering.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://rstudio.github.io/crosstalk/, https://github.com/rstudio/crosstalk",
+      "BugReports": "https://github.com/rstudio/crosstalk/issues",
+      "Imports": [
+        "htmltools (>= 0.3.6)",
+        "jsonlite",
+        "lazyeval",
+        "R6"
+      ],
+      "Suggests": [
+        "bslib",
+        "ggplot2",
+        "sass",
+        "shiny",
+        "testthat (>= 2.1.0)"
+      ],
+      "Config/Needs/website": "jcheng5/d3scatter, DT, leaflet, rmarkdown",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2",
+      "NeedsCompilation": "no",
+      "Author": "Joe Cheng [aut], Carson Sievert [aut, cre] (ORCID: <https://orcid.org/0000-0002-4958-2844>), Posit Software, PBC [cph, fnd], jQuery Foundation [cph] (jQuery library and jQuery UI library), jQuery contributors [ctb, cph] (jQuery library; authors listed in inst/www/shared/jquery-AUTHORS.txt), Mark Otto [ctb] (Bootstrap library), Jacob Thornton [ctb] (Bootstrap library), Bootstrap contributors [ctb] (Bootstrap library), Twitter, Inc [cph] (Bootstrap library), Brian Reavis [ctb, cph] (selectize.js library), Kristopher Michael Kowal [ctb, cph] (es5-shim library), es5-shim contributors [ctb, cph] (es5-shim library), Denis Ineshin [ctb, cph] (ion.rangeSlider library), Sami Samhuri [ctb, cph] (Javascript strftime library)",
+      "Maintainer": "Carson Sievert <carson@posit.co>",
       "Repository": "CRAN"
     },
     "curl": {
@@ -2509,6 +2631,39 @@
       "Maintainer": "Carson Sievert <carson@posit.co>",
       "Repository": "CRAN"
     },
+    "htmlwidgets": {
+      "Package": "htmlwidgets",
+      "Version": "1.6.4",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "HTML Widgets for R",
+      "Authors@R": "c( person(\"Ramnath\", \"Vaidyanathan\", role = c(\"aut\", \"cph\")), person(\"Yihui\", \"Xie\", role = \"aut\"), person(\"JJ\", \"Allaire\", role = \"aut\"), person(\"Joe\", \"Cheng\", , \"joe@posit.co\", role = \"aut\"), person(\"Carson\", \"Sievert\", , \"carson@posit.co\", role = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0002-4958-2844\")), person(\"Kenton\", \"Russell\", role = c(\"aut\", \"cph\")), person(\"Ellis\", \"Hughes\", role = \"ctb\"), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")) )",
+      "Description": "A framework for creating HTML widgets that render in various contexts including the R console, 'R Markdown' documents, and 'Shiny' web applications.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://github.com/ramnathv/htmlwidgets",
+      "BugReports": "https://github.com/ramnathv/htmlwidgets/issues",
+      "Imports": [
+        "grDevices",
+        "htmltools (>= 0.5.7)",
+        "jsonlite (>= 0.9.16)",
+        "knitr (>= 1.8)",
+        "rmarkdown",
+        "yaml"
+      ],
+      "Suggests": [
+        "testthat"
+      ],
+      "Enhances": [
+        "shiny (>= 1.1)"
+      ],
+      "VignetteBuilder": "knitr",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.2.3",
+      "NeedsCompilation": "no",
+      "Author": "Ramnath Vaidyanathan [aut, cph], Yihui Xie [aut], JJ Allaire [aut], Joe Cheng [aut], Carson Sievert [aut, cre] (<https://orcid.org/0000-0002-4958-2844>), Kenton Russell [aut, cph], Ellis Hughes [ctb], Posit Software, PBC [cph, fnd]",
+      "Maintainer": "Carson Sievert <carson@posit.co>",
+      "Repository": "https://packagemanager.posit.co/cran/latest"
+    },
     "httpuv": {
       "Package": "httpuv",
       "Version": "1.6.16",
@@ -2788,6 +2943,38 @@
       "Maintainer": "Sam Firke <samuel.firke@gmail.com>",
       "Repository": "https://packagemanager.posit.co/cran/latest"
     },
+    "jose": {
+      "Package": "jose",
+      "Version": "1.2.1",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "JavaScript Object Signing and Encryption",
+      "Authors@R": "person(\"Jeroen\", \"Ooms\", role = c(\"aut\", \"cre\"),  email = \"jeroenooms@gmail.com\", comment = c(ORCID = \"0000-0002-4035-0289\"))",
+      "Description": "Read and write JSON Web Keys (JWK, rfc7517), generate and verify JSON Web Signatures (JWS, rfc7515) and encode/decode JSON Web Tokens (JWT, rfc7519) <https://datatracker.ietf.org/wg/jose/documents/>. These standards provide  modern signing and encryption formats that are natively supported by browsers via the JavaScript WebCryptoAPI <https://www.w3.org/TR/WebCryptoAPI/#jose>,  and used by services like OAuth 2.0, LetsEncrypt, and Github Apps.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://r-lib.r-universe.dev/jose",
+      "BugReports": "https://github.com/r-lib/jose/issues",
+      "Depends": [
+        "openssl (>= 1.2.1)"
+      ],
+      "Imports": [
+        "jsonlite"
+      ],
+      "RoxygenNote": "7.1.2",
+      "VignetteBuilder": "knitr",
+      "Suggests": [
+        "spelling",
+        "testthat",
+        "knitr",
+        "rmarkdown"
+      ],
+      "Encoding": "UTF-8",
+      "Language": "en-US",
+      "NeedsCompilation": "no",
+      "Author": "Jeroen Ooms [aut, cre] (<https://orcid.org/0000-0002-4035-0289>)",
+      "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
+      "Repository": "CRAN"
+    },
     "jquerylib": {
       "Package": "jquerylib",
       "Version": "0.1.4",
@@ -3058,6 +3245,31 @@
       "RoxygenNote": "7.3.3",
       "NeedsCompilation": "no",
       "Repository": "https://packagemanager.posit.co/cran/latest"
+    },
+    "lazyeval": {
+      "Package": "lazyeval",
+      "Version": "0.2.2",
+      "Source": "Repository",
+      "Title": "Lazy (Non-Standard) Evaluation",
+      "Description": "An alternative approach to non-standard evaluation using formulas. Provides a full implementation of LISP style 'quasiquotation', making it easier to generate code with other code.",
+      "Authors@R": "c( person(\"Hadley\", \"Wickham\", ,\"hadley@rstudio.com\", c(\"aut\", \"cre\")), person(\"RStudio\", role = \"cph\") )",
+      "License": "GPL-3",
+      "LazyData": "true",
+      "Depends": [
+        "R (>= 3.1.0)"
+      ],
+      "Suggests": [
+        "knitr",
+        "rmarkdown (>= 0.2.65)",
+        "testthat",
+        "covr"
+      ],
+      "VignetteBuilder": "knitr",
+      "RoxygenNote": "6.1.1",
+      "NeedsCompilation": "yes",
+      "Author": "Hadley Wickham [aut, cre], RStudio [cph]",
+      "Maintainer": "Hadley Wickham <hadley@rstudio.com>",
+      "Repository": "CRAN"
     },
     "lhs": {
       "Package": "lhs",
@@ -3543,6 +3755,42 @@
       "NeedsCompilation": "no",
       "Author": "Gábor Csárdi [aut, cre]",
       "Maintainer": "Gábor Csárdi <csardi.gabor@gmail.com>",
+      "Repository": "CRAN"
+    },
+    "packrat": {
+      "Package": "packrat",
+      "Version": "0.9.3",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "A Dependency Management System for Projects and their R Package Dependencies",
+      "Authors@R": "c( person(\"Aron\", \"Atkins\", , \"aron@posit.co\", role = c(\"aut\", \"cre\")), person(\"Toph\", \"Allen\", role = \"aut\"), person(\"Kevin\", \"Ushey\", role = \"aut\"), person(\"Jonathan\", \"McPherson\", role = \"aut\"), person(\"Joe\", \"Cheng\", role = \"aut\"), person(\"JJ\", \"Allaire\", role = \"aut\"), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")) )",
+      "Description": "Manage the R packages your project depends on in an isolated, portable, and reproducible way.",
+      "License": "GPL-2",
+      "URL": "https://github.com/rstudio/packrat",
+      "BugReports": "https://github.com/rstudio/packrat/issues",
+      "Depends": [
+        "R (>= 3.0.0)"
+      ],
+      "Imports": [
+        "tools",
+        "utils"
+      ],
+      "Suggests": [
+        "devtools",
+        "httr",
+        "knitr",
+        "mockery",
+        "rmarkdown",
+        "testthat (>= 3.0.0)",
+        "webfakes",
+        "withr"
+      ],
+      "Config/testthat/edition": "3",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2",
+      "NeedsCompilation": "no",
+      "Author": "Aron Atkins [aut, cre], Toph Allen [aut], Kevin Ushey [aut], Jonathan McPherson [aut], Joe Cheng [aut], JJ Allaire [aut], Posit Software, PBC [cph, fnd]",
+      "Maintainer": "Aron Atkins <aron@posit.co>",
       "Repository": "CRAN"
     },
     "parallelly": {
@@ -4740,6 +4988,65 @@
       "Maintainer": "Hannah Frick <hannah@posit.co>",
       "Repository": "CRAN"
     },
+    "rsconnect": {
+      "Package": "rsconnect",
+      "Version": "1.7.0",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Deploy Docs, Apps, and APIs to 'Posit Connect', 'shinyapps.io', and 'RPubs'",
+      "Authors@R": "c( person(\"Aron\", \"Atkins\", , \"aron@posit.co\", role = c(\"aut\", \"cre\")), person(\"Toph\", \"Allen\", role = \"aut\"), person(\"Hadley\", \"Wickham\", role = \"aut\"), person(\"Jonathan\", \"McPherson\", role = \"aut\"), person(\"JJ\", \"Allaire\", role = \"aut\"), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")) )",
+      "Description": "Programmatic deployment interface for 'RPubs', 'shinyapps.io', and 'Posit Connect'. Supported content types include R Markdown documents, Shiny applications, Plumber APIs, plots, and static web content.",
+      "License": "GPL-2",
+      "URL": "https://rstudio.github.io/rsconnect/, https://github.com/rstudio/rsconnect",
+      "BugReports": "https://github.com/rstudio/rsconnect/issues",
+      "Depends": [
+        "R (>= 3.5.0)"
+      ],
+      "Imports": [
+        "cli",
+        "curl",
+        "digest",
+        "jsonlite",
+        "lifecycle",
+        "openssl (>= 2.0.0)",
+        "PKI",
+        "packrat (>= 0.6)",
+        "renv (>= 1.0.0)",
+        "rlang (>= 1.0.0)",
+        "rstudioapi (>= 0.5)",
+        "snowflakeauth",
+        "tools",
+        "yaml (>= 2.1.5)",
+        "utils"
+      ],
+      "Suggests": [
+        "Biobase",
+        "BiocManager",
+        "foreign",
+        "knitr",
+        "MASS",
+        "plumber (>= 0.3.2)",
+        "quarto",
+        "RCurl",
+        "reticulate",
+        "rmarkdown (>= 1.1)",
+        "shiny",
+        "testthat (>= 3.1.9)",
+        "webfakes",
+        "withr"
+      ],
+      "VignetteBuilder": "knitr, rmarkdown",
+      "Config/Needs/website": "tidyverse/tidytemplate",
+      "Config/testthat/edition": "3",
+      "Config/testthat/parallel": "true",
+      "Config/Python/Note": "Python <= 3.10 requires tomllib package for pyproject.toml parsing",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.3",
+      "NeedsCompilation": "no",
+      "Author": "Aron Atkins [aut, cre], Toph Allen [aut], Hadley Wickham [aut], Jonathan McPherson [aut], JJ Allaire [aut], Posit Software, PBC [cph, fnd]",
+      "Maintainer": "Aron Atkins <aron@posit.co>",
+      "Repository": "CRAN"
+    },
     "rstudioapi": {
       "Package": "rstudioapi",
       "Version": "0.17.1",
@@ -5126,6 +5433,37 @@
       "NeedsCompilation": "no",
       "Author": "Malte Grosser [aut, cre]",
       "Repository": "https://packagemanager.posit.co/cran/latest"
+    },
+    "snowflakeauth": {
+      "Package": "snowflakeauth",
+      "Version": "0.2.0",
+      "Source": "Repository",
+      "Title": "Authentication Helpers for 'Snowflake'",
+      "Authors@R": "c( person(\"Aaron\", \"Jacobs\", , \"aaron.jacobs@posit.co\", role = c(\"aut\")), person(\"E. David\", \"Aja\", , \"david@posit.co\", role = c(\"aut\", \"cre\")), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")) )",
+      "Description": "Authentication helpers for 'Snowflake'. It provides compatibility with authentication approaches supported by the 'Snowflake Connector for Python' <https://pypi.org/project/snowflake-connector-python> and the 'Snowflake CLI' <https://pypi.org/project/snowflake-cli>.",
+      "License": "MIT + file LICENSE",
+      "Encoding": "UTF-8",
+      "Imports": [
+        "cli",
+        "curl",
+        "jsonlite",
+        "RcppTOML",
+        "rlang",
+        "jose",
+        "openssl"
+      ],
+      "Suggests": [
+        "testthat (>= 3.0.0)",
+        "withr"
+      ],
+      "RoxygenNote": "7.3.2",
+      "Config/testthat/edition": "3",
+      "URL": "https://posit-dev.github.io/snowflakeauth/, https://github.com/posit-dev/snowflakeauth",
+      "BugReports": "https://github.com/posit-dev/snowflakeauth/issues",
+      "NeedsCompilation": "no",
+      "Author": "Aaron Jacobs [aut], E. David Aja [aut, cre], Posit Software, PBC [cph, fnd]",
+      "Maintainer": "E. David Aja <david@posit.co>",
+      "Repository": "CRAN"
     },
     "sodium": {
       "Package": "sodium",
@@ -6400,53 +6738,6 @@
       "NeedsCompilation": "yes",
       "Author": "Yihui Xie [aut, cre, cph] (ORCID: <https://orcid.org/0000-0003-0645-5666>, URL: https://yihui.org), Wush Wu [ctb], Daijiang Li [ctb], Xianying Tan [ctb], Salim Brüggemann [ctb] (ORCID: <https://orcid.org/0000-0002-5329-5987>), Christophe Dervieux [ctb]",
       "Maintainer": "Yihui Xie <xie@yihui.name>",
-      "Repository": "CRAN"
-    },
-    "xgboost": {
-      "Package": "xgboost",
-      "Version": "3.1.2.1",
-      "Source": "Repository",
-      "Type": "Package",
-      "Title": "Extreme Gradient Boosting",
-      "Date": "2025-11-20",
-      "Authors@R": "c( person(\"Tianqi\", \"Chen\", role = c(\"aut\"), email = \"tianqi.tchen@gmail.com\"), person(\"Tong\", \"He\", role = c(\"aut\"), email = \"hetong007@gmail.com\"), person(\"Michael\", \"Benesty\", role = c(\"aut\"), email = \"michael@benesty.fr\"), person(\"Vadim\", \"Khotilovich\", role = c(\"aut\"), email = \"khotilovich@gmail.com\"), person(\"Yuan\", \"Tang\", role = c(\"aut\"), email = \"terrytangyuan@gmail.com\", comment = c(ORCID = \"0000-0001-5243-233X\")), person(\"Hyunsu\", \"Cho\", role = c(\"aut\"), email = \"chohyu01@cs.washington.edu\"), person(\"Kailong\", \"Chen\", role = c(\"aut\")), person(\"Rory\", \"Mitchell\", role = c(\"aut\")), person(\"Ignacio\", \"Cano\", role = c(\"aut\")), person(\"Tianyi\", \"Zhou\", role = c(\"aut\")), person(\"Mu\", \"Li\", role = c(\"aut\")), person(\"Junyuan\", \"Xie\", role = c(\"aut\")), person(\"Min\", \"Lin\", role = c(\"aut\")), person(\"Yifeng\", \"Geng\", role = c(\"aut\")), person(\"Yutian\", \"Li\", role = c(\"aut\")), person(\"Jiaming\", \"Yuan\", role = c(\"aut\", \"cre\"), email = \"jm.yuan@outlook.com\"), person(\"David\", \"Cortes\", role = c(\"aut\")), person(\"XGBoost contributors\", role = c(\"cph\"), comment = \"base XGBoost implementation\") )",
-      "Maintainer": "Jiaming Yuan <jm.yuan@outlook.com>",
-      "Description": "Extreme Gradient Boosting, which is an efficient implementation of the gradient boosting framework from Chen & Guestrin (2016) <doi:10.1145/2939672.2939785>. This package is its R interface. The package includes efficient linear model solver and tree learning algorithms. The package can automatically do parallel computation on a single machine which could be more than 10 times faster than existing gradient boosting packages. It supports various objective functions, including regression, classification and ranking. The package is made to be extensible, so that users are also allowed to define their own objectives easily.",
-      "License": "Apache License (== 2.0) | file LICENSE",
-      "URL": "https://github.com/dmlc/xgboost",
-      "BugReports": "https://github.com/dmlc/xgboost/issues",
-      "NeedsCompilation": "yes",
-      "VignetteBuilder": "knitr",
-      "Suggests": [
-        "knitr",
-        "rmarkdown",
-        "ggplot2 (>= 1.0.1)",
-        "DiagrammeR (>= 0.9.0)",
-        "DiagrammeRsvg",
-        "rsvg",
-        "htmlwidgets",
-        "Ckmeans.1d.dp (>= 3.3.1)",
-        "vcd (>= 1.3)",
-        "testthat",
-        "igraph (>= 1.0.1)",
-        "float",
-        "titanic",
-        "RhpcBLASctl",
-        "survival"
-      ],
-      "Depends": [
-        "R (>= 4.3.0)"
-      ],
-      "Imports": [
-        "Matrix (>= 1.1-0)",
-        "methods",
-        "data.table (>= 1.9.6)",
-        "jsonlite (>= 1.0)"
-      ],
-      "RoxygenNote": "7.3.3",
-      "Encoding": "UTF-8",
-      "SystemRequirements": "GNU make, C++17",
-      "Author": "Tianqi Chen [aut], Tong He [aut], Michael Benesty [aut], Vadim Khotilovich [aut], Yuan Tang [aut] (ORCID: <https://orcid.org/0000-0001-5243-233X>), Hyunsu Cho [aut], Kailong Chen [aut], Rory Mitchell [aut], Ignacio Cano [aut], Tianyi Zhou [aut], Mu Li [aut], Junyuan Xie [aut], Min Lin [aut], Yifeng Geng [aut], Yutian Li [aut], Jiaming Yuan [aut, cre], David Cortes [aut], XGBoost contributors [cph] (base XGBoost implementation)",
       "Repository": "CRAN"
     },
     "xml2": {

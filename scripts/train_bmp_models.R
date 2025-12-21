@@ -7,7 +7,7 @@ library(butcher)
 # Usage:
 # Rscript scripts/train_bmp_models.R <training_template_csv> <fluids_concentrations_csv> [output_rds_path]
 # - training_template_csv: wide BMP data with prior/post columns to sample from.
-# - fluids_concentrations_csv: e.g., data/fluids_concentrations.csv
+# - fluids_concentrations_csv: e.g., data/fluids_concentrations.tsv
 # - output_rds_path: optional, default models/bmp_models_combined.RDS
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -21,7 +21,6 @@ output_path <- ifelse(length(args) >= 3, args[[3]], "models/bmp_models_combined.
 dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
 
 read_fluids <- function(path) {
-  # Accept either CSV or TSV fluid concentration files based on extension.
   delim <- ifelse(grepl("\\.tsv$", tolower(path)), "\t", ",")
   readr::read_delim(path, delim = delim, show_col_types = FALSE)
 }
@@ -36,7 +35,22 @@ all_lab_cols <- c(
   paste0(lab_strings_bmp_no_gap, "_post")
 )
 
-# Clean obvious issues that break downstream transforms (e.g., PCA).
+make_log_delta_prior_exprs <- function(cols) {
+  exprs <- map(cols, function(col) {
+    prior_col <- paste0(col, "_prior")
+    rlang::expr(log(0.01 + !!rlang::sym(col) / ifelse(!!rlang::sym(prior_col) == 0, 0.1, !!rlang::sym(prior_col))))
+  })
+  set_names(exprs, paste0(cols, "_log_delta_prior_prop"))
+}
+
+make_log_delta_post_exprs <- function(cols) {
+  exprs <- map(cols, function(col) {
+    post_col <- paste0(col, "_post")
+    rlang::expr(log(0.01 + !!rlang::sym(post_col) / ifelse(!!rlang::sym(col) == 0, 0.1, !!rlang::sym(col))))
+  })
+  set_names(exprs, paste0(cols, "_log_delta_post_prop"))
+}
+
 data <- data %>%
   mutate(across(any_of(all_lab_cols), ~ suppressWarnings(as.numeric(.)))) %>%
   mutate(across(any_of(all_lab_cols), ~ ifelse(is.finite(.), ., NA_real_))) %>%
@@ -100,13 +114,15 @@ makeSimulatedBinaryTrainingData <- function(train_input, fluid_row) {
 
 train_one_fluid <- function(train_input, fluid_row) {
   train <- makeSimulatedBinaryTrainingData(train_input, fluid_row)
+  prior_exprs <- make_log_delta_prior_exprs(lab_strings_bmp_no_gap)
+  post_exprs <- make_log_delta_post_exprs(lab_strings_bmp_no_gap)
 
   rec_retro <-
     recipe(train) |>
       update_role(target, new_role = "outcome") |>
       update_role(all_of(lab_strings_bmp_no_gap), new_role = "predictor") |>
-      step_mutate(across(any_of(!!lab_strings_bmp_no_gap), ~ log(0.01 + . / ifelse(get(paste0(dplyr::cur_column(), "_prior")) == 0, 0.1, get(paste0(dplyr::cur_column(), "_prior")))), .names = "{.col}_log_delta_prior_prop")) |>
-      step_mutate(across(any_of(!!lab_strings_bmp_no_gap), ~ log(0.01 + get(paste0(dplyr::cur_column(), "_post")) / ifelse(. == 0, 0.1, .)), .names = "{.col}_log_delta_post_prop")) |>
+      step_mutate(!!!prior_exprs) |>
+      step_mutate(!!!post_exprs) |>
       step_pca(matches("delta_prior"), num_comp = 3, keep_original_cols = TRUE, options = list(center = TRUE, scale. = TRUE), prefix = "prior_PC") |>
       step_pca(matches("delta_post"), num_comp = 3, keep_original_cols = TRUE, options = list(center = TRUE, scale. = TRUE), prefix = "post_PC") |>
       step_pca(matches("delta"), num_comp = 3, prefix = "all_PC", options = list(center = TRUE, scale. = TRUE), keep_original_cols = TRUE)
@@ -116,7 +132,7 @@ train_one_fluid <- function(train_input, fluid_row) {
     recipe(train) |>
       update_role(target, new_role = "outcome") |>
       update_role(all_of(lab_strings_bmp_no_gap), new_role = "predictor") |>
-      step_mutate(across(any_of(!!lab_strings_bmp_no_gap), ~ log(0.01 + . / ifelse(get(paste0(dplyr::cur_column(), "_prior")) == 0, 0.1, get(paste0(dplyr::cur_column(), "_prior")))), .names = "{.col}_log_delta_prior_prop")) |>
+      step_mutate(!!!prior_exprs) |>
       step_pca(all_predictors(), num_comp = 3, keep_original_cols = TRUE, options = list(center = TRUE, scale. = TRUE), prefix = "all_PC") |>
       step_pca(matches("delta_prior"), num_comp = 3, keep_original_cols = TRUE, options = list(center = TRUE, scale. = TRUE), prefix = "prior_PC")
   rec_realtime$template <- rec_realtime$template |> slice_head(n = 10)

@@ -3,6 +3,7 @@ library(tidyverse)
 library(tidymodels)
 library(jsonlite)
 library(readr)
+library(DT)
 
 
 app_file <- sys.frame(1)$ofile
@@ -92,7 +93,8 @@ read_upload <- function(fileinfo) {
 
 ui <- fluidPage(
   tags$head(
-    tags$style(HTML("
+    tags$style(HTML(
+      "
       .sidebar-section { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; }
       .sidebar-section:last-child { border-bottom: 0; padding-bottom: 0; }
       .section-title { font-weight: 600; margin-bottom: 8px; }
@@ -113,14 +115,25 @@ ui <- fluidPage(
       table.label-table { border-collapse: collapse; margin: 12px auto; }
       table.label-table th, table.label-table td { border: 1px solid #d1d5db; padding: 12px 20px; text-align: center; }
       .review-actions { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+      .input-hint { font-size: 12px; color: #6b7280; margin-top: 4px; }
+      .format-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #e0f2fe; color: #075985; font-size: 12px; margin-top: 6px; }
+      #fluids .shiny-options-group,
+      #train_fluids .shiny-options-group {
+        columns: 3;
+        -webkit-columns: 3;
+        -moz-columns: 3;
+      }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    ")),
-    tags$script(HTML("
+    "
+    )),
+    tags$script(HTML(
+      "
       Shiny.addCustomMessageHandler('triggerDownload', function(message) {
         var el = document.getElementById(message.id);
         if (el) { el.click(); }
       });
-    "))
+    "
+    ))
   ),
   titlePanel("FluidFlagger.ai"),
   sidebarLayout(
@@ -128,38 +141,131 @@ ui <- fluidPage(
       div(
         class = "sidebar-section",
         div(class = "section-title", "Mode"),
-        radioButtons("mode", NULL, choices = c("Predict", "Train", "Review"), inline = TRUE),
-        radioButtons("dataset", "Model set", choices = c("BMP", "CBC"), inline = TRUE)
+        radioButtons(
+          "mode",
+          NULL,
+          choices = c("Predict", "Train", "Review"),
+          inline = TRUE
+        ),
+        radioButtons(
+          "dataset",
+          "Model set",
+          choices = c("BMP", "CBC"),
+          inline = TRUE
+        )
       ),
       div(
         class = "sidebar-section",
         div(class = "section-title", "Data"),
         conditionalPanel(
           condition = "input.mode == 'Predict'",
-          fileInput("file", "Upload wide CSV/TSV", accept = c('.csv', '.tsv', '.txt'))
+          fluidRow(
+            column(
+              6,
+              fileInput(
+                "file_wide",
+                "Upload wide CSV/TSV",
+                accept = c(".csv", ".tsv", ".txt"),
+                placeholder = "Row = 1 BMP"
+              )
+            ),
+            column(
+              6,
+              fileInput(
+                "file_long",
+                "Upload long CSV/TSV",
+                accept = c(".csv", ".tsv", ".txt"),
+                placeholder = "Row = 1 Analyte"
+              )
+            )
+          )
         ),
         conditionalPanel(
           condition = "input.mode == 'Train'",
-          fileInput("train_file", "Upload training template CSV/TSV", accept = c('.csv', '.tsv', '.txt'))
+          fluidRow(
+            column(
+              6,
+              fileInput(
+                "train_file_wide",
+                "Upload training (wide CSV/TSV)",
+                accept = c(".csv", ".tsv", ".txt"),
+                placeholder = "Row = 1 BMP"
+              )
+            ),
+            column(
+              6,
+              fileInput(
+                "train_file_long",
+                "Upload training (long CSV/TSV)",
+                accept = c(".csv", ".tsv", ".txt"),
+                placeholder = "Row = 1 Analyte"
+              )
+            )
+          )
         ),
         conditionalPanel(
           condition = "input.mode == 'Review'",
-          fileInput("review_file", "Upload review CSV/TSV", accept = c('.csv', '.tsv', '.txt'))
+          fluidRow(
+            column(
+              6,
+              fileInput(
+                "review_file_wide",
+                "Upload review (wide CSV/TSV)",
+                accept = c(".csv", ".tsv", ".txt"),
+                placeholder = "Row = 1 BMP"
+              )
+            ),
+            column(
+              6,
+              fileInput(
+                "review_file_long",
+                "Upload review (long CSV/TSV)",
+                accept = c(".csv", ".tsv", ".txt"),
+                placeholder = "Row = 1 Analyte"
+              )
+            )
+          )
         ),
         conditionalPanel(
           condition = "input.dataset == 'BMP' && input.mode == 'Predict'",
-          checkboxGroupInput("fluids", "Include fluids", choices = bmp_fluids, selected = bmp_fluids),
-          fileInput("bmp_model_file", "Custom BMP models (combined RDS)", accept = c(".rds", ".RDS")),
-          fileInput("bmp_mix_model_file", "Custom BMP mix ratio models (RDS, optional)", accept = c(".rds", ".RDS"))
+          checkboxGroupInput(
+            "fluids",
+            "Fluids to include",
+            choices = bmp_fluids,
+            selected = bmp_fluids
+          ),
+          fileInput(
+            "bmp_model_file",
+            "Custom BMP models (combined RDS, optional)",
+            accept = c(".rds", ".RDS")
+          ),
+          fileInput(
+            "bmp_mix_model_file",
+            "Custom BMP mix ratio models (RDS, optional)",
+            accept = c(".rds", ".RDS")
+          )
         ),
         conditionalPanel(
           condition = "input.dataset == 'CBC' && input.mode == 'Predict'",
-          fileInput("cbc_model_file", "Custom CBC models (combined RDS)", accept = c(".rds", ".RDS")),
-          fileInput("cbc_mix_model_file", "Custom CBC mix model (RDS, optional)", accept = c(".rds", ".RDS"))
+          fileInput(
+            "cbc_model_file",
+            "Custom CBC models (combined RDS, optional)",
+            accept = c(".rds", ".RDS")
+          ),
+          fileInput(
+            "cbc_mix_model_file",
+            "Custom CBC mix model (RDS, optional)",
+            accept = c(".rds", ".RDS")
+          )
         ),
         conditionalPanel(
           condition = "input.dataset == 'BMP' && input.mode == 'Train'",
-          checkboxGroupInput("train_fluids", "Include fluids", choices = bmp_fluids_tbl$fluid, selected = bmp_fluids_tbl$fluid),
+          checkboxGroupInput(
+            "train_fluids",
+            "Fluids to include",
+            choices = bmp_fluids_tbl$fluid,
+            selected = bmp_fluids_tbl$fluid
+          ),
           actionButton("add_fluid", "Add fluid", class = "secondary-btn")
         )
       ),
@@ -171,18 +277,35 @@ ui <- fluidPage(
           div(
             class = "button-row",
             actionButton("train_models", "Train models", class = "primary-btn"),
-            downloadButton("download_trained_models", "Download models", class = "secondary-btn")
+            downloadButton(
+              "download_trained_models",
+              "Download models",
+              class = "secondary-btn"
+            )
           )
         ),
         conditionalPanel(
           condition = "input.mode == 'Predict'",
-          downloadButton("download", "Download predictions", class = "primary-btn")
+          div(
+            class = "button-row",
+            uiOutput("predict_action_ui"),
+            downloadButton(
+              "download",
+              "Download predictions",
+              class = "secondary-btn"
+            )
+          )
         )
       )
     ),
     mainPanel(
+      uiOutput("predict_instructions"),
+      uiOutput("train_instructions"),
+      uiOutput("review_instructions"),
       verbatimTextOutput("status"),
-      tableOutput("preview"),
+      uiOutput("format_badge"),
+      DTOutput("preview"),
+      textOutput("preview_count"),
       tableOutput("train_preview"),
       uiOutput("review_progress"),
       uiOutput("review_table"),
@@ -193,24 +316,34 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   preds <- reactiveVal(NULL)
+  predict_input <- reactiveVal(NULL)
+  predict_file_name <- reactiveVal(NULL)
+  predict_format <- reactiveVal(NULL)
   status_text <- reactiveVal("")
   train_fluids_tbl <- reactiveVal(bmp_fluids_tbl)
   trained_models_paths <- reactiveValues(BMP = NULL, CBC = NULL)
   trained_models_ready <- reactiveValues(BMP = FALSE, CBC = FALSE)
   trained_models_stamp <- reactiveValues(BMP = NULL, CBC = NULL)
+  train_input <- reactiveVal(NULL)
   train_preview <- reactiveVal(NULL)
   review_df <- reactiveVal(NULL)
   review_index <- reactiveVal(1)
   review_save_path <- reactiveVal(NULL)
+  review_file_name <- reactiveVal(NULL)
   bmp_models_cache <- reactiveVal(NULL)
   cbc_models_cache <- reactiveVal(NULL)
   clear_outputs <- function() {
     preds(NULL)
+    predict_input(NULL)
+    predict_file_name(NULL)
+    predict_format(NULL)
+    train_input(NULL)
     train_preview(NULL)
     status_text("")
     review_df(NULL)
     review_index(1)
     review_save_path(NULL)
+    review_file_name(NULL)
   }
   review_specs <- list(
     BMP = list(
@@ -233,6 +366,105 @@ server <- function(input, output, session) {
       round_cols = character(0)
     )
   )
+
+  run_predictions <- function(df) {
+    status_text("Running Predictions...")
+    showModal(modalDialog(
+      div(
+        style = "display:flex; align-items:center; gap:8px;",
+        div(class = "loader"),
+        div("Running predictions. This can take a few minutes.")
+      ),
+      footer = NULL,
+      easyClose = FALSE
+    ))
+    on.exit(removeModal(), add = TRUE)
+    if (input$dataset == "BMP") {
+      use_defaults <- is.null(input$bmp_model_file) || is.null(input$bmp_mix_model_file)
+      if (use_defaults && is.null(bmp_models_cache())) {
+        status_text("Loading BMP models...")
+        bmp_defaults <- tryCatch(load_bmp_models(), error = function(e) e)
+        if (inherits(bmp_defaults, "error")) {
+          status_text(paste("Model load error:", bmp_defaults$message))
+          preds(NULL)
+          return()
+        }
+        bmp_models_cache(bmp_defaults)
+      }
+      models_combined <- if (is.null(input$bmp_model_file)) {
+        bmp_models_cache()$models_combined
+      } else {
+        tryCatch(safe_read_rds(input$bmp_model_file$datapath), error = function(e) e)
+      }
+      mix_models <- if (is.null(input$bmp_mix_model_file)) {
+        bmp_models_cache()$mix_ratio_models
+      } else {
+        tryCatch(safe_read_rds(input$bmp_mix_model_file$datapath), error = function(e) e)
+      }
+      if (inherits(models_combined, "error")) {
+        status_text(paste("Custom model error:", models_combined$message))
+        preds(NULL)
+        return()
+      }
+      if (inherits(mix_models, "error")) {
+        status_text(paste("Custom mix model error:", mix_models$message))
+        preds(NULL)
+        return()
+      }
+      include <- input$fluids
+      models_combined <- models_combined |> keep(~ .x$fluid %in% include)
+      mix_models <- mix_models |> keep(~ .x$fluid %in% include)
+      res <- tryCatch(
+        makeBmpPredictions(df, models_combined = models_combined, mix_ratio_models = mix_models),
+        error = function(e) e
+      )
+    } else {
+      use_defaults <- is.null(input$cbc_model_file) || is.null(input$cbc_mix_model_file)
+      if (use_defaults && is.null(cbc_models_cache())) {
+        status_text("Loading CBC models...")
+        cbc_defaults <- tryCatch(load_cbc_models(), error = function(e) e)
+        if (inherits(cbc_defaults, "error")) {
+          status_text(paste("Model load error:", cbc_defaults$message))
+          preds(NULL)
+          return()
+        }
+        cbc_models_cache(cbc_defaults)
+      }
+      models_combined <- if (is.null(input$cbc_model_file)) {
+        cbc_models_cache()$models_combined
+      } else {
+        tryCatch(safe_read_rds(input$cbc_model_file$datapath), error = function(e) e)
+      }
+      mix_models <- if (is.null(input$cbc_mix_model_file)) {
+        cbc_models_cache()$mix_ratio_workflows
+      } else {
+        tryCatch(safe_read_rds(input$cbc_mix_model_file$datapath), error = function(e) e)
+      }
+      if (inherits(models_combined, "error")) {
+        status_text(paste("Custom model error:", models_combined$message))
+        preds(NULL)
+        return()
+      }
+      if (inherits(mix_models, "error")) {
+        status_text(paste("Custom mix model error:", mix_models$message))
+        preds(NULL)
+        return()
+      }
+      res <- tryCatch(
+        makeCbcPredictions(df, models_combined = models_combined, mix_ratio_workflows = mix_models),
+        error = function(e) e
+      )
+    }
+
+    if (inherits(res, "error")) {
+      status_text(paste("Prediction error:", res$message))
+      preds(NULL)
+      return()
+    }
+
+    status_text("Predictions ready.")
+    preds(res)
+  }
   review_cell_html <- function(value, prior_cmp, post_cmp) {
     val_str <- if (is.na(value)) "" else as.character(value)
     html <- paste0("<div style='position:relative;'>", val_str)
@@ -391,28 +623,16 @@ server <- function(input, output, session) {
     )
   }, ignoreInit = TRUE)
 
-  observeEvent(input$train_file, {
-    clear_outputs()
-    req(input$mode == "Train")
-    df <- tryCatch(read_upload(input$train_file), error = function(e) e)
-    if (inherits(df, "error")) {
-      status_text(paste("Error reading training file:", df$message))
-      train_preview(NULL)
-      return()
-    }
-    train_preview(df)
-    status_text("Training template loaded.")
-  })
-
-  observeEvent(input$review_file, {
+  observeEvent(input$review_file_wide, {
     clear_outputs()
     req(input$mode == "Review")
-    df <- tryCatch(read_upload(input$review_file), error = function(e) e)
+    df <- tryCatch(read_upload(input$review_file_wide), error = function(e) e)
     if (inherits(df, "error")) {
       status_text(paste("Error reading review file:", df$message))
       review_df(NULL)
       return()
     }
+    review_file_name(input$review_file_wide$name)
     spec <- review_specs[[input$dataset]]
     for (col in spec$round_cols) {
       for (suffix in c("", "_prior", "_post")) {
@@ -424,114 +644,137 @@ server <- function(input, output, session) {
     }
     review_df(df)
     review_index(1)
-    base <- tools::file_path_sans_ext(input$review_file$name)
+    base <- tools::file_path_sans_ext(input$review_file_wide$name)
     out_dir <- file.path(root, "results")
     dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
     review_save_path(file.path(out_dir, paste0(base, "_labels.csv")))
     status_text("Review file loaded.")
   })
 
-  observeEvent(input$file, {
+  observeEvent(input$review_file_long, {
+    clear_outputs()
+    req(input$mode == "Review")
+    status_text("Preprocessing long-form review data...")
+    showModal(modalDialog(
+      div(
+        style = "display:flex; align-items:center; gap:8px;",
+        div(class = "loader"),
+        div("Preprocessing long-form review data.")
+      ),
+      footer = NULL,
+      easyClose = FALSE
+    ))
+    on.exit(removeModal(), add = TRUE)
+    df <- tryCatch(read_upload(input$review_file_long), error = function(e) e)
+    if (inherits(df, "error")) {
+      status_text(paste("Error reading review file:", df$message))
+      review_df(NULL)
+      return()
+    }
+    wide_df <- if (input$dataset == "BMP") {
+      tryCatch(preprocessBmpData(df), error = function(e) e)
+    } else {
+      tryCatch(preprocessCBCData(df), error = function(e) e)
+    }
+    if (inherits(wide_df, "error")) {
+      status_text(paste("Review preprocess error:", wide_df$message))
+      review_df(NULL)
+      return()
+    }
+    review_file_name(input$review_file_long$name)
+    spec <- review_specs[[input$dataset]]
+    for (col in spec$round_cols) {
+      for (suffix in c("", "_prior", "_post")) {
+        name <- paste0(col, suffix)
+        if (name %in% names(wide_df)) {
+          wide_df[[name]] <- round(as.numeric(wide_df[[name]]), 1)
+        }
+      }
+    }
+    review_df(wide_df)
+    review_index(1)
+    base <- tools::file_path_sans_ext(input$review_file_long$name)
+    out_dir <- file.path(root, "results")
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+    review_save_path(file.path(out_dir, paste0(base, "_labels.csv")))
+    status_text("Review file loaded.")
+  })
+
+  observeEvent(input$file_wide, {
     clear_outputs()
     req(input$mode == "Predict")
-    df <- tryCatch(read_upload(input$file), error = function(e) e)
+    df <- tryCatch(read_upload(input$file_wide), error = function(e) e)
     if (inherits(df, "error")) {
       status_text(paste("Error reading file:", df$message))
       preds(NULL)
       return()
     }
+    predict_input(df)
+    predict_file_name(input$file_wide$name)
+    predict_format("wide")
+    status_text("Upload complete. Click Run Predictions.")
+  })
 
-    if (input$dataset == "BMP") {
-      use_defaults <- is.null(input$bmp_model_file) || is.null(input$bmp_mix_model_file)
-      if (use_defaults && is.null(bmp_models_cache())) {
-        status_text("Loading BMP models...")
-        bmp_defaults <- tryCatch(load_bmp_models(), error = function(e) e)
-        if (inherits(bmp_defaults, "error")) {
-          status_text(paste("Model load error:", bmp_defaults$message))
-          preds(NULL)
-          return()
-        }
-        bmp_models_cache(bmp_defaults)
-      }
-      models_combined <- if (is.null(input$bmp_model_file)) {
-        bmp_models_cache()$models_combined
-      } else {
-        tryCatch(safe_read_rds(input$bmp_model_file$datapath), error = function(e) e)
-      }
-      mix_models <- if (is.null(input$bmp_mix_model_file)) {
-        bmp_models_cache()$mix_ratio_models
-      } else {
-        tryCatch(safe_read_rds(input$bmp_mix_model_file$datapath), error = function(e) e)
-      }
-      if (inherits(models_combined, "error")) {
-        status_text(paste("Custom model error:", models_combined$message))
-        preds(NULL)
-        return()
-      }
-      if (inherits(mix_models, "error")) {
-        status_text(paste("Custom mix model error:", mix_models$message))
-        preds(NULL)
-        return()
-      }
-      include <- input$fluids
-      models_combined <- models_combined |> keep(~ .x$fluid %in% include)
-      mix_models <- mix_models |> keep(~ .x$fluid %in% include)
-      res <- tryCatch(
-        makeBmpPredictions(df, models_combined = models_combined, mix_ratio_models = mix_models),
-        error = function(e) e
-      )
-    } else {
-      use_defaults <- is.null(input$cbc_model_file) || is.null(input$cbc_mix_model_file)
-      if (use_defaults && is.null(cbc_models_cache())) {
-        status_text("Loading CBC models...")
-        cbc_defaults <- tryCatch(load_cbc_models(), error = function(e) e)
-        if (inherits(cbc_defaults, "error")) {
-          status_text(paste("Model load error:", cbc_defaults$message))
-          preds(NULL)
-          return()
-        }
-        cbc_models_cache(cbc_defaults)
-      }
-      models_combined <- if (is.null(input$cbc_model_file)) {
-        cbc_models_cache()$models_combined
-      } else {
-        tryCatch(safe_read_rds(input$cbc_model_file$datapath), error = function(e) e)
-      }
-      mix_models <- if (is.null(input$cbc_mix_model_file)) {
-        cbc_models_cache()$mix_ratio_workflows
-      } else {
-        tryCatch(safe_read_rds(input$cbc_mix_model_file$datapath), error = function(e) e)
-      }
-      if (inherits(models_combined, "error")) {
-        status_text(paste("Custom model error:", models_combined$message))
-        preds(NULL)
-        return()
-      }
-      if (inherits(mix_models, "error")) {
-        status_text(paste("Custom mix model error:", mix_models$message))
-        preds(NULL)
-        return()
-      }
-      res <- tryCatch(
-        makeCbcPredictions(df, models_combined = models_combined, mix_ratio_workflows = mix_models),
-        error = function(e) e
-      )
-    }
-
-    if (inherits(res, "error")) {
-      status_text(paste("Prediction error:", res$message))
+  observeEvent(input$file_long, {
+    clear_outputs()
+    req(input$mode == "Predict")
+    status_text("Preprocessing long-form data...")
+    showModal(modalDialog(
+      div(
+        style = "display:flex; align-items:center; gap:8px;",
+        div(class = "loader"),
+        div("Preprocessing long-form data.")
+      ),
+      footer = NULL,
+      easyClose = FALSE
+    ))
+    on.exit(removeModal(), add = TRUE)
+    df <- tryCatch(read_upload(input$file_long), error = function(e) e)
+    if (inherits(df, "error")) {
+      status_text(paste("Error reading file:", df$message))
       preds(NULL)
       return()
     }
+    wide_df <- if (input$dataset == "BMP") {
+      tryCatch(preprocessBmpData(df), error = function(e) e)
+    } else {
+      tryCatch(preprocessCBCData(df), error = function(e) e)
+    }
+    if (inherits(wide_df, "error")) {
+      status_text(paste("Preprocess error:", wide_df$message))
+      preds(NULL)
+      return()
+    }
+    predict_input(wide_df)
+    predict_file_name(input$file_long$name)
+    predict_format("long")
+    status_text("Upload complete. Click Run Predictions.")
+  })
 
-    status_text("Predictions ready.")
-    preds(res)
+  observeEvent(input$run_predictions, {
+    req(input$mode == "Predict")
+    df <- predict_input()
+    if (is.null(df)) {
+      status_text("Prediction error: upload a file first.")
+      preds(NULL)
+      return()
+    }
+    showModal(modalDialog(
+      div(
+        style = "display:flex; align-items:center; gap:8px;",
+        div(class = "loader"),
+        div("Running predictions...")
+      ),
+      footer = NULL,
+      easyClose = FALSE
+    ))
+    run_predictions(df)
   })
 
   observeEvent(input$train_models, {
     clear_outputs()
     req(input$mode == "Train")
-    req(input$train_file)
+    req(train_input())
     status_text("Training models...")
     showModal(modalDialog(
       div(
@@ -545,11 +788,7 @@ server <- function(input, output, session) {
     on.exit(removeModal(), add = TRUE)
     trained_dataset <- input$dataset
 
-    train_df <- tryCatch(read_upload(input$train_file), error = function(e) e)
-    if (inherits(train_df, "error")) {
-      status_text(paste("Training error:", train_df$message))
-      return()
-    }
+    train_df <- train_input()
     train_file_csv <- tempfile("train_data_", fileext = ".csv")
     readr::write_csv(train_df, train_file_csv)
 
@@ -614,6 +853,45 @@ server <- function(input, output, session) {
     }
   })
 
+  observeEvent(input$train_file_wide, {
+    clear_outputs()
+    req(input$mode == "Train")
+    df <- tryCatch(read_upload(input$train_file_wide), error = function(e) e)
+    if (inherits(df, "error")) {
+      status_text(paste("Training error:", df$message))
+      train_preview(NULL)
+      return()
+    }
+    train_input(df)
+    train_preview(df)
+    status_text("Training file loaded. Ready to train.")
+  })
+
+  observeEvent(input$train_file_long, {
+    clear_outputs()
+    req(input$mode == "Train")
+    status_text("Preprocessing long-form training data...")
+    df <- tryCatch(read_upload(input$train_file_long), error = function(e) e)
+    if (inherits(df, "error")) {
+      status_text(paste("Training error:", df$message))
+      train_preview(NULL)
+      return()
+    }
+    wide_df <- if (input$dataset == "BMP") {
+      tryCatch(preprocessBmpData(df), error = function(e) e)
+    } else {
+      tryCatch(preprocessCBCData(df), error = function(e) e)
+    }
+    if (inherits(wide_df, "error")) {
+      status_text(paste("Training preprocess error:", wide_df$message))
+      train_preview(NULL)
+      return()
+    }
+    train_input(wide_df)
+    train_preview(wide_df)
+    status_text("Training file loaded. Ready to train.")
+  })
+
   observeEvent(input$label_real, {
     req(input$mode == "Review")
     save_review_label("Real")
@@ -629,15 +907,117 @@ server <- function(input, output, session) {
     save_review_label("Equivocal")
   })
 
-  output$preview <- renderTable({
-    req(preds())
-    head(preds(), 10)
+  output$preview <- renderDT({
+    req(input$mode == "Predict")
+    df <- if (!is.null(preds())) preds() else predict_input()
+    req(df)
+    display_df <- head(df, 10)
+    datatable(
+      display_df,
+      rownames = FALSE,
+      options = list(pageLength = 10, dom = "t", scrollX = TRUE)
+    )
+  })
+
+  output$predict_instructions <- renderUI({
+    req(input$mode == "Predict")
+    if (!is.null(predict_input()) || !is.null(preds())) {
+      return(NULL)
+    }
+    if (input$dataset == "BMP") {
+      tagList(
+        h4("How to run predictions"),
+        tags$ol(
+          tags$li("Choose BMP, then upload a wide or long file."),
+          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
+          tags$li("Click Run Predictions, then download the results.")
+        ),
+        tags$strong("Wide-form required columns:"),
+        tags$p("sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
+        tags$strong("Long-form required columns:"),
+        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+      )
+    } else {
+      tagList(
+        h4("How to run predictions"),
+        tags$ol(
+          tags$li("Choose CBC, then upload a wide or long file."),
+          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
+          tags$li("Click Run Predictions, then download the results.")
+        ),
+        tags$strong("Wide-form required columns:"),
+        tags$p("Hgb, WBC, Plt, Hgb_prior, WBC_prior, Plt_prior, Hgb_post, WBC_post, Plt_post."),
+        tags$strong("Long-form required columns:"),
+        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+      )
+    }
+  })
+
+  output$preview_count <- renderText({
+    req(input$mode == "Predict")
+    df <- if (!is.null(preds())) preds() else predict_input()
+    if (is.null(df)) {
+      return("")
+    }
+    paste("Loaded", nrow(df), "total rows")
+  })
+
+  output$format_badge <- renderUI({
+    req(input$mode == "Predict")
+    fmt <- predict_format()
+    if (is.null(fmt)) {
+      return(NULL)
+    }
+    div(class = "format-badge", paste("Detected format:", fmt))
+  })
+
+  output$predict_action_ui <- renderUI({
+    req(input$mode == "Predict")
+    if (is.null(predict_input())) {
+      actionButton("run_predictions", "Run Predictions", class = "primary-btn", disabled = "disabled")
+    } else {
+      actionButton("run_predictions", "Run Predictions", class = "primary-btn")
+    }
   })
 
   output$train_preview <- renderTable({
     req(input$mode == "Train")
     req(train_preview())
     head(train_preview(), 10)
+  })
+
+  output$train_instructions <- renderUI({
+    req(input$mode == "Train")
+    if (!is.null(train_input())) {
+      return(NULL)
+    }
+    if (input$dataset == "BMP") {
+      tagList(
+        h4("How to train models"),
+        tags$ol(
+          tags$li("Choose BMP, then upload a wide or long training file."),
+          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
+          tags$li("Click Train models to build new workflows.")
+        ),
+        tags$strong("Wide-form required columns:"),
+        tags$p("sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
+        tags$strong("Long-form required columns:"),
+        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+      )
+    } else {
+      tagList(
+        h4("How to train models"),
+        tags$ol(
+          tags$li("Choose CBC, then upload a wide or long training file."),
+          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
+          tags$li("Click Train models to build new workflows.")
+        ),
+        tags$strong("Wide-form required columns:"),
+        tags$p("Hgb, WBC, Plt, plus Hgb_prior, WBC_prior, Plt_prior and Hgb_post, WBC_post, Plt_post."),
+        tags$strong("Long-form required columns:"),
+        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+      )
+    }
   })
 
   output$review_progress <- renderUI({
@@ -649,6 +1029,40 @@ server <- function(input, output, session) {
     idx <- review_index()
     total <- nrow(df)
     div(paste0("Reviewing ", min(idx, total), " of ", total))
+  })
+
+  output$review_instructions <- renderUI({
+    req(input$mode == "Review")
+    if (!is.null(review_df())) {
+      return(NULL)
+    }
+    if (input$dataset == "BMP") {
+      tagList(
+        h4("How to review"),
+        tags$ol(
+          tags$li("Upload a review CSV/TSV in wide or long form."),
+          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
+          tags$li("Verify the table preview, then label each row as Real, Contaminated, or Equivocal."),
+          tags$li("Use the download button at any time to save your labels.")
+        ),
+        tags$strong("Required columns:"),
+        tags$p("Wide-form: sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
+        tags$p("Long-form: PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+      )
+    } else {
+      tagList(
+        h4("How to review"),
+        tags$ol(
+          tags$li("Upload a review CSV/TSV in wide or long form."),
+          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
+          tags$li("Verify the table preview, then label each row as Real, Contaminated, or Equivocal."),
+          tags$li("Use the download button at any time to save your labels.")
+        ),
+        tags$strong("Required columns:"),
+        tags$p("Wide-form: Hgb, WBC, Plt, plus Hgb_prior, WBC_prior, Plt_prior and Hgb_post, WBC_post, Plt_post."),
+        tags$p("Long-form: PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+      )
+    }
   })
 
   output$review_table <- renderUI({
@@ -693,8 +1107,13 @@ server <- function(input, output, session) {
 
   output$download <- downloadHandler(
     filename = function() {
-      base <- tools::file_path_sans_ext(input$file$name)
-      paste0(base, "_predictions.csv")
+      name <- predict_file_name()
+      if (is.null(name)) {
+        "predictions.csv"
+      } else {
+        base <- tools::file_path_sans_ext(name)
+        paste0(base, "_predictions.csv")
+      }
     },
     content = function(file) {
       req(preds())
@@ -733,10 +1152,11 @@ server <- function(input, output, session) {
 
   output$download_review_labels <- downloadHandler(
     filename = function() {
-      if (is.null(input$review_file)) {
+      name <- review_file_name()
+      if (is.null(name)) {
         "review_labels.csv"
       } else {
-        base <- tools::file_path_sans_ext(input$review_file$name)
+        base <- tools::file_path_sans_ext(name)
         paste0(base, "_labels.csv")
       }
     },

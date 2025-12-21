@@ -8,6 +8,9 @@ suppressPackageStartupMessages({
   source("scripts/bmp_helpers.R")
 })
 
+# Ensure cur_column is available when butchered recipes are evaluated.
+assign("cur_column", dplyr::cur_column, envir = .GlobalEnv)
+
 load_models <- function() {
   list(
     models_combined = read_rds(Sys.getenv("BMP_MODEL_PATH", "models/bmp_models_combined.RDS")),

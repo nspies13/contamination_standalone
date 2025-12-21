@@ -1,5 +1,6 @@
 library(tidyverse)
 library(tidymodels)
+library(bonsai)
 library(bundle)
 library(butcher)
 
