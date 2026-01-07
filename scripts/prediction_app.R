@@ -83,6 +83,82 @@ load_cbc_models <- function() {
 
 bmp_fluids_tbl <- read_delim(file.path(root, "data", "fluid_concentrations.tsv"), delim = "\t", show_col_types = FALSE)
 bmp_fluids <- bmp_fluids_tbl$fluid
+bmp_test_wide <- read_delim(file.path(root, "data", "bmp_test_wide.csv"), delim = ",", show_col_types = FALSE)
+cbc_test_wide <- read_delim(file.path(root, "data", "cbc_test_wide.csv"), delim = ",", show_col_types = FALSE)
+
+manual_input_id <- function(analyte, timing) {
+  paste0("manual_", timing, "_", analyte)
+}
+
+manual_default_value <- function(df, col_name) {
+  if (is.null(df) || nrow(df) == 0 || !col_name %in% names(df)) {
+    return(NA_real_)
+  }
+  suppressWarnings(as.numeric(df[[col_name]][[1]]))
+}
+
+manual_defaults_for <- function(dataset) {
+  if (dataset == "BMP") {
+    analytes <- lab_strings
+    df <- bmp_test_wide
+  } else {
+    analytes <- c("Hgb", "WBC", "Plt")
+    df <- cbc_test_wide
+  }
+  defaults <- list()
+  for (analyte in analytes) {
+    defaults[[analyte]] <- manual_default_value(df, analyte)
+    defaults[[paste0(analyte, "_prior")]] <- manual_default_value(df, paste0(analyte, "_prior"))
+    defaults[[paste0(analyte, "_post")]] <- NA_real_
+  }
+  defaults
+}
+
+predict_specs <- list(
+  BMP = list(
+    analytes = lab_strings,
+    display = c(
+      sodium = "Na",
+      chloride = "Cl",
+      potassium_plas = "K",
+      co2_totl = "CO2",
+      bun = "BUN",
+      creatinine = "Cr",
+      calcium = "Ca",
+      glucose = "Glu"
+    ),
+    units = c(
+      sodium = "mmol/L",
+      chloride = "mmol/L",
+      potassium_plas = "mmol/L",
+      co2_totl = "mmol/L",
+      bun = "mg/dL",
+      creatinine = "mg/dL",
+      calcium = "mg/dL",
+      glucose = "mg/dL"
+    ),
+    bounds = list(
+      sodium = c(120, 160),
+      chloride = c(85, 120),
+      potassium_plas = c(2.0, 6.5),
+      co2_totl = c(10, 40),
+      bun = c(2, 80),
+      creatinine = c(0.3, 6),
+      calcium = c(6, 12),
+      glucose = c(40, 400)
+    )
+  ),
+  CBC = list(
+    analytes = c("Hgb", "WBC", "Plt"),
+    display = c(Hgb = "Hgb", WBC = "WBC", Plt = "Plt"),
+    units = c(Hgb = "g/dL", WBC = "10^3/uL", Plt = "10^3/uL"),
+    bounds = list(
+      Hgb = c(5, 20),
+      WBC = c(1, 50),
+      Plt = c(20, 1000)
+    )
+  )
+)
 
 read_upload <- function(fileinfo) {
   req(fileinfo)
@@ -117,12 +193,34 @@ ui <- fluidPage(
       .review-actions { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
       .input-hint { font-size: 12px; color: #6b7280; margin-top: 4px; }
       .format-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #e0f2fe; color: #075985; font-size: 12px; margin-top: 6px; }
+      .manual-panel { margin-top: 12px; margin-bottom: 16px; padding: 12px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; width: 100%; }
+      .manual-grid { display: grid; gap: 8px; align-items: center; width: 100%; }
+      .manual-cell { padding: 6px 8px; border-radius: 8px; background: #fff; border: 1px solid #e2e8f0; text-align: center; }
+      .manual-header { font-weight: 600; background: #eef2ff; border-color: #c7d2fe; }
+      .manual-header-spacer { background: transparent; border-color: transparent; }
+      .manual-row-label { font-weight: 600; background: #f1f5f9; text-align: right; padding-right: 12px; width: 80px; }
+      .manual-input .form-group { margin-bottom: 0; }
+      .manual-input input { text-align: center; width: 100%; }
+      .manual-units { font-size: 11px; font-style: italic; color: #6b7280; display: flex; align-items: center; justify-content: center; height: 100%; padding-top: 0; padding-bottom: 0; }
+      .manual-units-cell { background: transparent; border-color: transparent; }
       #fluids .shiny-options-group,
       #train_fluids .shiny-options-group {
-        columns: 3;
-        -webkit-columns: 3;
-        -moz-columns: 3;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px 16px;
       }
+      #fluids .checkbox,
+      #train_fluids .checkbox {
+        margin-top: 0;
+        margin-bottom: 0;
+      }
+      #fluids label,
+      #train_fluids label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      #fluids .control-label { padding-bottom: 6px; }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     "
     )),
@@ -159,25 +257,39 @@ ui <- fluidPage(
         div(class = "section-title", "Data"),
         conditionalPanel(
           condition = "input.mode == 'Predict'",
-          fluidRow(
-            column(
-              6,
-              fileInput(
-                "file_wide",
-                "Upload wide CSV/TSV",
-                accept = c(".csv", ".tsv", ".txt"),
-                placeholder = "Row = 1 BMP"
-              )
-            ),
-            column(
-              6,
-              fileInput(
-                "file_long",
-                "Upload long CSV/TSV",
-                accept = c(".csv", ".tsv", ".txt"),
-                placeholder = "Row = 1 Analyte"
+          radioButtons(
+            "predict_input_mode",
+            "Prediction Input",
+            choices = c("Upload File", "Manual Entry"),
+            selected = "Upload File",
+            inline = TRUE
+          ),
+          conditionalPanel(
+            condition = "input.predict_input_mode == 'Upload File'",
+            fluidRow(
+              column(
+                6,
+                fileInput(
+                  "file_wide",
+                  "Upload Wide CSV/TSV",
+                  accept = c(".csv", ".tsv", ".txt"),
+                  placeholder = "Row = 1 BMP"
+                )
+              ),
+              column(
+                6,
+                fileInput(
+                  "file_long",
+                  "Upload Long CSV/TSV",
+                  accept = c(".csv", ".tsv", ".txt"),
+                  placeholder = "Row = 1 Analyte"
+                )
               )
             )
+          ),
+          conditionalPanel(
+            condition = "input.predict_input_mode == 'Manual Entry'",
+            NULL
           )
         ),
         conditionalPanel(
@@ -187,7 +299,7 @@ ui <- fluidPage(
               6,
               fileInput(
                 "train_file_wide",
-                "Upload training (wide CSV/TSV)",
+                "Upload Training (Wide CSV/TSV)",
                 accept = c(".csv", ".tsv", ".txt"),
                 placeholder = "Row = 1 BMP"
               )
@@ -196,7 +308,7 @@ ui <- fluidPage(
               6,
               fileInput(
                 "train_file_long",
-                "Upload training (long CSV/TSV)",
+                "Upload Training (Long CSV/TSV)",
                 accept = c(".csv", ".tsv", ".txt"),
                 placeholder = "Row = 1 Analyte"
               )
@@ -210,7 +322,7 @@ ui <- fluidPage(
               6,
               fileInput(
                 "review_file_wide",
-                "Upload review (wide CSV/TSV)",
+                "Upload Review (Wide CSV/TSV)",
                 accept = c(".csv", ".tsv", ".txt"),
                 placeholder = "Row = 1 BMP"
               )
@@ -219,7 +331,7 @@ ui <- fluidPage(
               6,
               fileInput(
                 "review_file_long",
-                "Upload review (long CSV/TSV)",
+                "Upload Review (Long CSV/TSV)",
                 accept = c(".csv", ".tsv", ".txt"),
                 placeholder = "Row = 1 Analyte"
               )
@@ -230,18 +342,18 @@ ui <- fluidPage(
           condition = "input.dataset == 'BMP' && input.mode == 'Predict'",
           checkboxGroupInput(
             "fluids",
-            "Fluids to include",
+            "Fluids to Include",
             choices = bmp_fluids,
-            selected = bmp_fluids
+            selected = setdiff(bmp_fluids, "LR")
           ),
           fileInput(
             "bmp_model_file",
-            "Custom BMP models (combined RDS, optional)",
+            "Custom BMP Models (Combined RDS, Optional)",
             accept = c(".rds", ".RDS")
           ),
           fileInput(
             "bmp_mix_model_file",
-            "Custom BMP mix ratio models (RDS, optional)",
+            "Custom BMP Mix Ratio Models (RDS, Optional)",
             accept = c(".rds", ".RDS")
           )
         ),
@@ -249,12 +361,12 @@ ui <- fluidPage(
           condition = "input.dataset == 'CBC' && input.mode == 'Predict'",
           fileInput(
             "cbc_model_file",
-            "Custom CBC models (combined RDS, optional)",
+            "Custom CBC Models (Combined RDS, Optional)",
             accept = c(".rds", ".RDS")
           ),
           fileInput(
             "cbc_mix_model_file",
-            "Custom CBC mix model (RDS, optional)",
+            "Custom CBC Mix Model (RDS, Optional)",
             accept = c(".rds", ".RDS")
           )
         ),
@@ -262,11 +374,11 @@ ui <- fluidPage(
           condition = "input.dataset == 'BMP' && input.mode == 'Train'",
           checkboxGroupInput(
             "train_fluids",
-            "Fluids to include",
+            "Fluids to Include",
             choices = bmp_fluids_tbl$fluid,
             selected = bmp_fluids_tbl$fluid
           ),
-          actionButton("add_fluid", "Add fluid", class = "secondary-btn")
+          actionButton("add_fluid", "Add Fluid", class = "secondary-btn")
         )
       ),
       div(
@@ -279,7 +391,7 @@ ui <- fluidPage(
             actionButton("train_models", "Train Models", class = "primary-btn"),
             downloadButton(
               "download_trained_models",
-              "Download models",
+              "Download Models",
               class = "secondary-btn"
             )
           )
@@ -291,7 +403,18 @@ ui <- fluidPage(
             uiOutput("predict_action_ui"),
             downloadButton(
               "download",
-              "Download predictions",
+              "Download Predictions",
+              class = "secondary-btn"
+            )
+          )
+        ),
+        conditionalPanel(
+          condition = "input.mode == 'Review'",
+          div(
+            class = "button-row",
+            downloadButton(
+              "download_review_labels",
+              "Download Labels",
               class = "secondary-btn"
             )
           )
@@ -302,7 +425,19 @@ ui <- fluidPage(
       uiOutput("predict_instructions"),
       uiOutput("train_instructions"),
       uiOutput("review_instructions"),
+      conditionalPanel(
+        condition = "input.mode == 'Predict' && input.predict_input_mode == 'Manual Entry'",
+        div(
+          class = "manual-panel",
+          div(class = "section-title", "Single Prediction"),
+          uiOutput("manual_entry_ui")
+        )
+      ),
       verbatimTextOutput("status"),
+      conditionalPanel(
+        condition = "input.mode == 'Predict' && input.predict_input_mode == 'Manual Entry'",
+        uiOutput("manual_results")
+      ),
       uiOutput("format_badge"),
       DTOutput("preview"),
       textOutput("preview_count"),
@@ -345,6 +480,13 @@ server <- function(input, output, session) {
     review_save_path(NULL)
     review_file_name(NULL)
   }
+  clear_predict_outputs <- function() {
+    preds(NULL)
+    predict_input(NULL)
+    predict_file_name(NULL)
+    predict_format(NULL)
+    status_text("")
+  }
   review_specs <- list(
     BMP = list(
       analytes = lab_strings,
@@ -366,6 +508,66 @@ server <- function(input, output, session) {
       round_cols = character(0)
     )
   )
+
+  manual_input_df <- reactive({
+    req(input$mode == "Predict")
+    req(input$predict_input_mode == "Manual Entry")
+    spec <- predict_specs[[input$dataset]]
+    analytes <- spec$analytes
+    values <- list()
+    for (analyte in analytes) {
+      values[[analyte]] <- suppressWarnings(as.numeric(input[[manual_input_id(analyte, "current")]]))
+      values[[paste0(analyte, "_prior")]] <- suppressWarnings(as.numeric(input[[manual_input_id(analyte, "prior")]]))
+      values[[paste0(analyte, "_post")]] <- suppressWarnings(as.numeric(input[[manual_input_id(analyte, "post")]]))
+    }
+    as_tibble(values)
+  })
+
+  manual_out_of_range <- reactive({
+    req(input$mode == "Predict")
+    req(input$predict_input_mode == "Manual Entry")
+    spec <- predict_specs[[input$dataset]]
+    analytes <- spec$analytes
+    warnings <- character(0)
+    for (analyte in analytes) {
+      bounds <- spec$bounds[[analyte]]
+      unit <- spec$units[[analyte]]
+      for (timing in c("prior", "current", "post")) {
+        value <- input[[manual_input_id(analyte, timing)]]
+        if (!is.null(value) && !is.na(value) && (value < bounds[1] || value > bounds[2])) {
+          warnings <- c(
+            warnings,
+            paste0(
+              spec$display[[analyte]],
+              " ",
+              timing,
+              " (",
+              value,
+              " ",
+              unit,
+              ") is outside ",
+              bounds[1],
+              "-",
+              bounds[2],
+              " ",
+              unit,
+              "."
+            )
+          )
+        }
+      }
+    }
+    warnings
+  })
+
+  current_predict_df <- reactive({
+    req(input$mode == "Predict")
+    if (input$predict_input_mode == "Manual Entry") {
+      manual_input_df()
+    } else {
+      predict_input()
+    }
+  })
 
   run_predictions <- function(df) {
     status_text("Running Predictions...")
@@ -564,6 +766,145 @@ server <- function(input, output, session) {
 
   output$status <- renderText(status_text())
 
+  output$manual_entry_ui <- renderUI({
+    req(input$mode == "Predict")
+    req(input$predict_input_mode == "Manual Entry")
+    spec <- predict_specs[[input$dataset]]
+    analytes <- spec$analytes
+    defaults <- manual_defaults_for(input$dataset)
+    grid_cols <- paste0("80px repeat(", length(analytes), ", minmax(80px, 1fr))")
+    header_cells <- list(div(class = "manual-cell manual-header manual-header-spacer", ""))
+    for (analyte in analytes) {
+      header_cells <- c(header_cells, list(div(class = "manual-cell manual-header", spec$display[[analyte]])))
+    }
+    row_for <- function(label, timing, optional = FALSE) {
+      row_cells <- list(
+        div(
+          class = "manual-cell manual-row-label",
+          label
+        )
+      )
+      for (analyte in analytes) {
+        col_name <- if (timing == "current") analyte else paste0(analyte, "_", timing)
+        row_cells <- c(row_cells, list(
+          div(
+            class = "manual-cell manual-input",
+            if (optional) {
+              tags$input(
+                id = manual_input_id(analyte, timing),
+                type = "number",
+                class = "form-control",
+                placeholder = "Optional",
+                value = if (is.na(defaults[[col_name]])) "" else defaults[[col_name]],
+                step = "0.1"
+              )
+            } else {
+              numericInput(
+                manual_input_id(analyte, timing),
+                NULL,
+                value = defaults[[col_name]],
+                step = 0.1,
+                width = "100%"
+              )
+            }
+          )
+        ))
+      }
+      row_cells
+    }
+    units_row <- list(div(class = "manual-cell manual-row-label manual-units manual-units-cell", ""))
+    for (analyte in analytes) {
+      units_row <- c(units_row, list(div(class = "manual-cell manual-units manual-units-cell", spec$units[[analyte]])))
+    }
+    div(
+      class = "manual-grid",
+      style = paste0("grid-template-columns:", grid_cols, ";"),
+      header_cells,
+      row_for("Prior", "prior"),
+      row_for("Current", "current"),
+      row_for("Post", "post", optional = TRUE),
+      units_row
+    )
+  })
+
+  output$manual_results <- renderUI({
+    req(input$mode == "Predict")
+    req(input$predict_input_mode == "Manual Entry")
+    df <- preds()
+    if (is.null(df) || nrow(df) == 0) {
+      return(NULL)
+    }
+    row <- df[1, , drop = FALSE]
+    post_cols <- names(row)[grepl("_post$", names(row))]
+    post_present <- length(post_cols) > 0 && any(!is.na(unlist(row[post_cols])), na.rm = TRUE)
+    pred_type <- if (post_present) "Retrospective" else "Realtime"
+    if (input$dataset == "BMP") {
+      positives <- character(0)
+      ratios <- numeric(0)
+      for (fluid in bmp_fluids) {
+        pred_cols <- names(row)[
+          grepl(paste0("^pred_", pred_type), names(row)) &
+            grepl(paste0("_", fluid, "$"), names(row))
+        ]
+        pred_cols <- pred_cols[!grepl("LR", pred_cols)]
+        is_positive <- length(pred_cols) > 0 && any(unlist(row[pred_cols]) == "Contaminated", na.rm = TRUE)
+        if (is_positive) {
+          positives <- c(positives, fluid)
+          ratio_col <- paste0("mix_ratio_", fluid)
+          ratio_val <- if (ratio_col %in% names(row)) as.numeric(row[[ratio_col]][[1]]) else NA_real_
+          ratios <- c(ratios, ratio_val)
+        }
+      }
+      if (length(positives) == 0) {
+        return(tagList(
+        div(tags$strong("Prediction:"), tags$span("Real", style = "margin-left:8px;"))
+        ))
+      }
+      ratio_labels <- ifelse(is.na(ratios), "NA", format(round(ratios, 3), nsmall = 3))
+      max_idx <- if (all(is.na(ratios))) NA_integer_ else which.max(ratios)
+      max_fluid <- if (is.na(max_idx)) NA_character_ else positives[[max_idx]]
+      max_ratio <- if (is.na(max_idx)) NA_character_ else ratio_labels[[max_idx]]
+      contam_label <- if (length(positives) == 1) positives[[1]] else paste(positives, collapse = ", ")
+      ratio_text <- if (!post_present) {
+        tags$span(
+          "Post results required for Mixture Ratio estimation.",
+          style = "color:#9ca3af;font-style:italic;"
+        )
+      } else {
+          max_ratio
+      }
+      tagList(
+        div(tags$strong("Prediction:"), tags$span("Contaminated", style = "margin-left:8px;color:#7f1d1d;font-weight:700;font-style:italic;")),
+        div(tags$strong("Contaminant:"), tags$span(contam_label, style = "margin-left:8px;")),
+        div(tags$strong("Mixture Ratio:"), tags$span(ratio_text, style = "margin-left:8px;"))
+      )
+    } else {
+      pred_cols <- names(row)[grepl(paste0("^pred_", pred_type), names(row))]
+      pred_cols <- pred_cols[!grepl("LR", pred_cols)]
+      is_positive <- length(pred_cols) > 0 && any(unlist(row[pred_cols]) == "Contaminated", na.rm = TRUE)
+      ratio_val <- if ("mix_ratio_CBC" %in% names(row)) as.numeric(row$mix_ratio_CBC[[1]]) else NA_real_
+      ratio_label <- if (is.na(ratio_val)) "NA" else format(round(ratio_val, 3), nsmall = 3)
+      if (!is_positive) {
+        return(tagList(
+        div(tags$strong("Prediction:"), tags$span("Real", style = "margin-left:8px;"))
+      ))
+      }
+      ratio_text <- if (!post_present) {
+        tags$span(
+          "Post results required for Mixture Ratio estimation.",
+          style = "color:#9ca3af;font-style:italic;"
+        )
+      } else {
+        paste0(" ", ratio_label)
+      }
+      tagList(
+        div(tags$strong("Prediction:"), tags$span("Contaminated", style = "margin-left:8px;color:#7f1d1d;font-weight:700;font-style:italic;")),
+        div(tags$strong("Contaminating Fluid:"), tags$span("CBC", style = "margin-left:8px;")),
+        div(tags$strong("Mixture Ratio:"), tags$span(ratio_text, style = "margin-left:8px;"))
+      )
+    }
+  })
+
   observeEvent(input$mode, {
     clear_outputs()
   })
@@ -572,12 +913,22 @@ server <- function(input, output, session) {
     clear_outputs()
   })
 
+  observeEvent(input$predict_input_mode, {
+    req(input$mode == "Predict")
+    clear_predict_outputs()
+    if (input$predict_input_mode == "Manual Entry") {
+      predict_format("manual")
+      predict_file_name("manual_entry")
+      status_text("Manual Entry Ready. Click Run Predictions.")
+    }
+  })
+
   observeEvent(input$add_fluid, {
     clear_outputs()
     req(input$mode == "Train", input$dataset == "BMP")
     showModal(modalDialog(
       title = "Add fluid",
-      textInput("new_fluid_name", "Fluid name"),
+      textInput("new_fluid_name", "Fluid Name"),
       lapply(lab_strings, function(analyte) {
         numericInput(paste0("new_fluid_", analyte), analyte, value = NA_real_)
       }),
@@ -753,7 +1104,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$run_predictions, {
     req(input$mode == "Predict")
-    df <- predict_input()
+    df <- if (input$predict_input_mode == "Manual Entry") manual_input_df() else predict_input()
     if (is.null(df)) {
       status_text("Prediction error: upload a file first.")
       preds(NULL)
@@ -909,7 +1260,10 @@ server <- function(input, output, session) {
 
   output$preview <- renderDT({
     req(input$mode == "Predict")
-    df <- if (!is.null(preds())) preds() else predict_input()
+    if (input$predict_input_mode == "Manual Entry") {
+      return(NULL)
+    }
+    df <- if (!is.null(preds())) preds() else current_predict_df()
     req(df)
     display_df <- head(df, 10)
     datatable(
@@ -921,33 +1275,36 @@ server <- function(input, output, session) {
 
   output$predict_instructions <- renderUI({
     req(input$mode == "Predict")
+    if (input$predict_input_mode == "Manual Entry") {
+      return(NULL)
+    }
     if (!is.null(predict_input()) || !is.null(preds())) {
       return(NULL)
     }
     if (input$dataset == "BMP") {
       tagList(
-        h4("How to run predictions"),
+        h4("How to Run Predictions"),
         tags$ol(
-          tags$li("Choose panel, then upload a wide or long file."),
+          tags$li("Choose panel, then prediction input method (batch or manual)."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
           tags$li("Click 'Run Predictions', then download the results.")
         ),
-        tags$strong("Wide-form required columns:"),
+        tags$strong("Wide-Form Required Columns:"),
         tags$p("sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
-        tags$strong("Long-form required columns:"),
+        tags$strong("Long-Form Required Columns:"),
         tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
       )
     } else {
       tagList(
-        h4("How to run predictions"),
+        h4("How to Run Predictions"),
         tags$ol(
-          tags$li("Choose panel, then upload a wide or long file."),
+          tags$li("Choose panel, then prediction input method (batch or manual)."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
           tags$li("Click 'Run Predictions', then download the results.")
         ),
-        tags$strong("Wide-form required columns:"),
+        tags$strong("Wide-Form Required Columns:"),
         tags$p("Hgb, WBC, Plt, Hgb_prior, WBC_prior, Plt_prior, Hgb_post, WBC_post, Plt_post."),
-        tags$strong("Long-form required columns:"),
+        tags$strong("Long-Form Required Columns:"),
         tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
       )
     }
@@ -955,7 +1312,10 @@ server <- function(input, output, session) {
 
   output$preview_count <- renderText({
     req(input$mode == "Predict")
-    df <- if (!is.null(preds())) preds() else predict_input()
+    if (input$predict_input_mode == "Manual Entry") {
+      return("")
+    }
+    df <- if (!is.null(preds())) preds() else current_predict_df()
     if (is.null(df)) {
       return("")
     }
@@ -964,6 +1324,9 @@ server <- function(input, output, session) {
 
   output$format_badge <- renderUI({
     req(input$mode == "Predict")
+    if (input$predict_input_mode == "Manual Entry") {
+      return(NULL)
+    }
     fmt <- predict_format()
     if (is.null(fmt)) {
       return(NULL)
@@ -973,7 +1336,9 @@ server <- function(input, output, session) {
 
   output$predict_action_ui <- renderUI({
     req(input$mode == "Predict")
-    if (is.null(predict_input())) {
+    if (input$predict_input_mode == "Manual Entry") {
+      actionButton("run_predictions", "Run Predictions", class = "primary-btn")
+    } else if (is.null(predict_input())) {
       actionButton("run_predictions", "Run Predictions", class = "primary-btn", disabled = "disabled")
     } else {
       actionButton("run_predictions", "Run Predictions", class = "primary-btn")
@@ -993,28 +1358,28 @@ server <- function(input, output, session) {
     }
     if (input$dataset == "BMP") {
       tagList(
-        h4("How to train models"),
+        h4("How to Train Models"),
         tags$ol(
           tags$li("Choose panel, then upload a wide or long training file."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
           tags$li("Click 'Train Models' to build new workflows.")
         ),
-        tags$strong("Wide-form required columns:"),
+        tags$strong("Wide-Form Required Columns:"),
         tags$p("sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
-        tags$strong("Long-form required columns:"),
+        tags$strong("Long-Form Required Columns:"),
         tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
       )
     } else {
       tagList(
-        h4("How to train models"),
+        h4("How to Train Models"),
         tags$ol(
           tags$li("Choose panel, then upload a wide or long training file."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
           tags$li("Click 'Train Models' to build new workflows.")
         ),
-        tags$strong("Wide-form required columns:"),
+        tags$strong("Wide-Form Required Columns:"),
         tags$p("Hgb, WBC, Plt, plus Hgb_prior, WBC_prior, Plt_prior and Hgb_post, WBC_post, Plt_post."),
-        tags$strong("Long-form required columns:"),
+        tags$strong("Long-Form Required Columns:"),
         tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
       )
     }
@@ -1038,27 +1403,27 @@ server <- function(input, output, session) {
     }
     if (input$dataset == "BMP") {
       tagList(
-        h4("How to review"),
+        h4("How to Review"),
         tags$ol(
           tags$li("Upload a review CSV/TSV in wide or long form."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
           tags$li("Verify the table preview, then label each row as Real, Contaminated, or Equivocal."),
-          tags$li("Use the download button at any time to save your labels.")
+          tags$li("Use the 'Download labels' button in Actions at any time to save your labels.")
         ),
-        tags$strong("Required columns:"),
+        tags$strong("Required Columns:"),
         tags$p("Wide-form: sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
         tags$p("Long-form: PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
       )
     } else {
       tagList(
-        h4("How to review"),
+        h4("How to Review"),
         tags$ol(
           tags$li("Upload a review CSV/TSV in wide or long form."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
           tags$li("Verify the table preview, then label each row as Real, Contaminated, or Equivocal."),
-          tags$li("Use the download button at any time to save your labels.")
+          tags$li("Use the 'Download labels' button in Actions at any time to save your labels.")
         ),
-        tags$strong("Required columns:"),
+        tags$strong("Required Columns:"),
         tags$p("Wide-form: Hgb, WBC, Plt, plus Hgb_prior, WBC_prior, Plt_prior and Hgb_post, WBC_post, Plt_post."),
         tags$p("Long-form: PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
       )
@@ -1074,7 +1439,10 @@ server <- function(input, output, session) {
     idx <- review_index()
     total <- nrow(df)
     if (idx > total) {
-      return(div("All entries labeled."))
+      return(tagList(
+        div("All Entries Labeled."),
+        div("Click 'Download Labels' in Actions to Save Your Labels.")
+      ))
     }
     spec <- review_specs[[input$dataset]]
     row <- df[idx, , drop = FALSE]
@@ -1093,10 +1461,6 @@ server <- function(input, output, session) {
         actionButton("label_real", "Real", class = "primary-btn"),
         actionButton("label_contam", "Contaminated", class = "secondary-btn"),
         actionButton("label_equivocal", "Equivocal", class = "secondary-btn")
-      ),
-      div(
-        class = "review-actions",
-        downloadButton("download_review_labels", "Download labels", class = "secondary-btn")
       ),
       div(
         class = "review-actions",
