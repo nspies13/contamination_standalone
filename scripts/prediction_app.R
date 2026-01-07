@@ -276,7 +276,7 @@ ui <- fluidPage(
           condition = "input.mode == 'Train'",
           div(
             class = "button-row",
-            actionButton("train_models", "Train models", class = "primary-btn"),
+            actionButton("train_models", "Train Models", class = "primary-btn"),
             downloadButton(
               "download_trained_models",
               "Download models",
@@ -928,9 +928,9 @@ server <- function(input, output, session) {
       tagList(
         h4("How to run predictions"),
         tags$ol(
-          tags$li("Choose BMP, then upload a wide or long file."),
+          tags$li("Choose panel, then upload a wide or long file."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
-          tags$li("Click Run Predictions, then download the results.")
+          tags$li("Click 'Run Predictions', then download the results.")
         ),
         tags$strong("Wide-form required columns:"),
         tags$p("sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
@@ -941,9 +941,9 @@ server <- function(input, output, session) {
       tagList(
         h4("How to run predictions"),
         tags$ol(
-          tags$li("Choose CBC, then upload a wide or long file."),
+          tags$li("Choose panel, then upload a wide or long file."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
-          tags$li("Click Run Predictions, then download the results.")
+          tags$li("Click 'Run Predictions', then download the results.")
         ),
         tags$strong("Wide-form required columns:"),
         tags$p("Hgb, WBC, Plt, Hgb_prior, WBC_prior, Plt_prior, Hgb_post, WBC_post, Plt_post."),
@@ -995,9 +995,9 @@ server <- function(input, output, session) {
       tagList(
         h4("How to train models"),
         tags$ol(
-          tags$li("Choose panel (CBC, BMP), then upload a wide or long training file."),
+          tags$li("Choose panel, then upload a wide or long training file."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
-          tags$li("Click Train models to build new workflows.")
+          tags$li("Click 'Train Models' to build new workflows.")
         ),
         tags$strong("Wide-form required columns:"),
         tags$p("sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
@@ -1008,9 +1008,9 @@ server <- function(input, output, session) {
       tagList(
         h4("How to train models"),
         tags$ol(
-          tags$li("Choose panel (CBC, BMP), then upload a wide or long training file."),
+          tags$li("Choose panel, then upload a wide or long training file."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
-          tags$li("Click Train models to build new workflows.")
+          tags$li("Click 'Train Models' to build new workflows.")
         ),
         tags$strong("Wide-form required columns:"),
         tags$p("Hgb, WBC, Plt, plus Hgb_prior, WBC_prior, Plt_prior and Hgb_post, WBC_post, Plt_post."),
