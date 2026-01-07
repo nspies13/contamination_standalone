@@ -1,5 +1,9 @@
 args <- commandArgs(trailingOnly = TRUE)
-app_name <- if (length(args) >= 1 && nzchar(args[[1]])) args[[1]] else "contamination-prediction"
+app_name <- if (length(args) >= 1 && nzchar(args[[1]])) args[[1]] else "FluidFlagger"
+
+if (file.exists(".Renviron")) {
+  readRenviron(".Renviron")
+}
 
 name <- Sys.getenv("SHINYAPPS_NAME", unset = "")
 token <- Sys.getenv("SHINYAPPS_TOKEN", unset = "")
@@ -22,5 +26,6 @@ rsconnect::deployApp(
     "models",
     file.path("data", "fluid_concentrations.tsv")
   ),
-  appName = app_name
+  appName = app_name,
+  forceUpdate = T
 )

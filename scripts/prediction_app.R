@@ -149,7 +149,7 @@ ui <- fluidPage(
         ),
         radioButtons(
           "dataset",
-          "Model set",
+          "Analyte Panel",
           choices = c("BMP", "CBC"),
           inline = TRUE
         )
@@ -995,7 +995,7 @@ server <- function(input, output, session) {
       tagList(
         h4("How to train models"),
         tags$ol(
-          tags$li("Choose BMP, then upload a wide or long training file."),
+          tags$li("Choose panel (CBC, BMP), then upload a wide or long training file."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
           tags$li("Click Train models to build new workflows.")
         ),
@@ -1008,7 +1008,7 @@ server <- function(input, output, session) {
       tagList(
         h4("How to train models"),
         tags$ol(
-          tags$li("Choose CBC, then upload a wide or long training file."),
+          tags$li("Choose panel (CBC, BMP), then upload a wide or long training file."),
           tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
           tags$li("Click Train models to build new workflows.")
         ),
