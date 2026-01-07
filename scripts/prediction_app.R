@@ -83,8 +83,18 @@ load_cbc_models <- function() {
 
 bmp_fluids_tbl <- read_delim(file.path(root, "data", "fluid_concentrations.tsv"), delim = "\t", show_col_types = FALSE)
 bmp_fluids <- bmp_fluids_tbl$fluid
-bmp_test_wide <- read_delim(file.path(root, "data", "bmp_test_wide.csv"), delim = ",", show_col_types = FALSE)
-cbc_test_wide <- read_delim(file.path(root, "data", "cbc_test_wide.csv"), delim = ",", show_col_types = FALSE)
+bmp_test_path <- file.path(root, "data", "bmp_test_wide.csv")
+cbc_test_path <- file.path(root, "data", "cbc_test_wide.csv")
+bmp_test_wide <- if (file.exists(bmp_test_path)) {
+  read_delim(bmp_test_path, delim = ",", show_col_types = FALSE)
+} else {
+  tibble()
+}
+cbc_test_wide <- if (file.exists(cbc_test_path)) {
+  read_delim(cbc_test_path, delim = ",", show_col_types = FALSE)
+} else {
+  tibble()
+}
 
 manual_input_id <- function(analyte, timing) {
   paste0("manual_", timing, "_", analyte)
