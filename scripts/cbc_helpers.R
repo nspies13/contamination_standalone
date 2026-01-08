@@ -1,17 +1,9 @@
 preprocessCBCData <- function(data_long = read_csv("cbc_test_long.csv"), collection_interval = 48) {
   names(data_long) <- toupper(names(data_long))
 
-  if (!"PATIENT_ID" %in% names(data_long) && "EPIC_MRN" %in% names(data_long)) {
-    data_long <- data_long |> rename(PATIENT_ID = EPIC_MRN)
-  }
-
-  if (!"RESULT_VALUE_NUMERIC" %in% names(data_long) && "RESULT_VALUE" %in% names(data_long)) {
-    data_long <- data_long |> rename(RESULT_VALUE_NUMERIC = RESULT_VALUE)
-  }
-
   data_long <- data_long |>
     mutate(
-      RESULT_VALUE_NUMERIC = as.numeric(RESULT_VALUE_NUMERIC),
+      RESULT_VALUE_NUMERIC = as.numeric(RESULT_VALUE),
       DRAWN_DT_TM = lubridate::ymd_hms(DRAWN_DT_TM, tz = "UTC", quiet = TRUE)
     ) |>
     filter(!is.na(DRAWN_DT_TM))

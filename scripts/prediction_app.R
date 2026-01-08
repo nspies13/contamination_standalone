@@ -177,6 +177,16 @@ read_upload <- function(fileinfo) {
   read_delim(fileinfo$datapath, delim = delim, show_col_types = FALSE)
 }
 
+missing_long_columns <- function(df) {
+  names_upper <- toupper(names(df))
+  required <- c("PATIENT_ID", "DRAWN_DT_TM", "TASK_ASSAY")
+  missing <- setdiff(required, names_upper)
+  if (!("RESULT_VALUE" %in% names_upper)) {
+    missing <- c(missing, "RESULT_VALUE")
+  }
+  unique(missing)
+}
+
 ui <- fluidPage(
   tags$head(
     tags$style(HTML(
@@ -219,6 +229,7 @@ ui <- fluidPage(
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 8px 16px;
       }
+      #fluids .shiny-options-group { margin-bottom: 12px; }
       #fluids .checkbox,
       #train_fluids .checkbox {
         margin-top: 0;
@@ -231,6 +242,16 @@ ui <- fluidPage(
         gap: 8px;
       }
       #fluids .control-label { padding-bottom: 6px; }
+      #bmp_model_file { margin-top: 12px; margin-bottom: 4px; }
+      #bmp_mix_model_file { margin-top: 0; }
+      #file_wide,
+      #file_long,
+      #train_file_wide,
+      #train_file_long,
+      #review_file_wide,
+      #review_file_long {
+        margin-bottom: 0;
+      }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     "
     )),
@@ -295,7 +316,8 @@ ui <- fluidPage(
                   placeholder = "Row = 1 Analyte"
                 )
               )
-            )
+            ),
+            NULL
           ),
           conditionalPanel(
             condition = "input.predict_input_mode == 'Manual Entry'",
@@ -323,7 +345,8 @@ ui <- fluidPage(
                 placeholder = "Row = 1 Analyte"
               )
             )
-          )
+          ),
+          NULL
         ),
         conditionalPanel(
           condition = "input.mode == 'Review'",
@@ -346,7 +369,8 @@ ui <- fluidPage(
                 placeholder = "Row = 1 Analyte"
               )
             )
-          )
+          ),
+          NULL
         ),
         conditionalPanel(
           condition = "input.dataset == 'BMP' && input.mode == 'Predict'",
@@ -356,6 +380,7 @@ ui <- fluidPage(
             choices = bmp_fluids,
             selected = setdiff(bmp_fluids, "LR")
           ),
+          tags$div(style = "height: 16px;"),
           fileInput(
             "bmp_model_file",
             "Custom BMP Models (Combined RDS, Optional)",
@@ -388,6 +413,7 @@ ui <- fluidPage(
             choices = bmp_fluids_tbl$fluid,
             selected = bmp_fluids_tbl$fluid
           ),
+          tags$div(style = "height: 16px;"),
           actionButton("add_fluid", "Add Fluid", class = "secondary-btn")
         )
       ),
@@ -428,6 +454,11 @@ ui <- fluidPage(
               class = "secondary-btn"
             )
           )
+        ),
+        tags$div(
+          style = "height:0; overflow:hidden;",
+          downloadButton("download_template_wide", "Download Wide Template"),
+          downloadButton("download_template_long", "Download Long Template")
         )
       )
     ),
@@ -1096,13 +1127,19 @@ server <- function(input, output, session) {
       preds(NULL)
       return()
     }
+    missing_cols <- missing_long_columns(df)
+    if (length(missing_cols) > 0) {
+      status_text(paste("Preprocess Error: Missing columns:", paste(missing_cols, collapse = ", ")))
+      preds(NULL)
+      return()
+    }
     wide_df <- if (input$dataset == "BMP") {
       tryCatch(preprocessBmpData(df), error = function(e) e)
     } else {
       tryCatch(preprocessCBCData(df), error = function(e) e)
     }
     if (inherits(wide_df, "error")) {
-      status_text(paste("Preprocess error:", wide_df$message))
+      status_text(paste("Preprocess Error:", conditionMessage(wide_df)))
       preds(NULL)
       return()
     }
@@ -1295,27 +1332,63 @@ server <- function(input, output, session) {
       tagList(
         h4("How to Run Predictions"),
         tags$ol(
-          tags$li("Choose panel, then prediction input method (batch or manual)."),
-          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
+          tags$li("Select the analyte panel (BMP or CBC)."),
+          tags$li("Choose the prediction input method: Upload File or Manual Entry."),
+          tags$li("If uploading, choose wide or long format and select your file."),
+          tags$li("If using manual entry, fill Prior/Current (Post optional)."),
           tags$li("Click 'Run Predictions', then download the results.")
         ),
+        tags$br(),
         tags$strong("Wide-Form Required Columns:"),
         tags$p("sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_wide').click(); return false;",
+            "Download Wide Template"
+          )
+        ),
+        tags$br(),
         tags$strong("Long-Form Required Columns:"),
-        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_long').click(); return false;",
+            "Download Long Template"
+          )
+        )
       )
     } else {
       tagList(
         h4("How to Run Predictions"),
         tags$ol(
-          tags$li("Choose panel, then prediction input method (batch or manual)."),
-          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
+          tags$li("Select the analyte panel (BMP or CBC)."),
+          tags$li("Choose the prediction input method: Upload File or Manual Entry."),
+          tags$li("If uploading, choose wide or long format and select your file."),
+          tags$li("If using manual entry, fill Prior/Current (Post optional)."),
           tags$li("Click 'Run Predictions', then download the results.")
         ),
+        tags$br(),
         tags$strong("Wide-Form Required Columns:"),
         tags$p("Hgb, WBC, Plt, Hgb_prior, WBC_prior, Plt_prior, Hgb_post, WBC_post, Plt_post."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_wide').click(); return false;",
+            "Download Wide Template"
+          )
+        ),
+        tags$br(),
         tags$strong("Long-Form Required Columns:"),
-        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_long').click(); return false;",
+            "Download Long Template"
+          )
+        )
       )
     }
   })
@@ -1370,27 +1443,63 @@ server <- function(input, output, session) {
       tagList(
         h4("How to Train Models"),
         tags$ol(
-          tags$li("Choose panel, then upload a wide or long training file."),
-          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
-          tags$li("Click 'Train Models' to build new workflows.")
+          tags$li("Select the analyte panel (BMP or CBC)."),
+          tags$li("Upload a wide or long training file."),
+          tags$li("Review the preview table to confirm columns."),
+          tags$li("Click 'Train Models' to build new workflows."),
+          tags$li("Download models when training completes.")
         ),
+        tags$br(),
         tags$strong("Wide-Form Required Columns:"),
         tags$p("sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_wide').click(); return false;",
+            "Download Wide Template"
+          )
+        ),
+        tags$br(),
         tags$strong("Long-Form Required Columns:"),
-        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_long').click(); return false;",
+            "Download Long Template"
+          )
+        )
       )
     } else {
       tagList(
         h4("How to Train Models"),
         tags$ol(
-          tags$li("Choose panel, then upload a wide or long training file."),
-          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
-          tags$li("Click 'Train Models' to build new workflows.")
+          tags$li("Select the analyte panel (BMP or CBC)."),
+          tags$li("Upload a wide or long training file."),
+          tags$li("Review the preview table to confirm columns."),
+          tags$li("Click 'Train Models' to build new workflows."),
+          tags$li("Download models when training completes.")
         ),
+        tags$br(),
         tags$strong("Wide-Form Required Columns:"),
         tags$p("Hgb, WBC, Plt, plus Hgb_prior, WBC_prior, Plt_prior and Hgb_post, WBC_post, Plt_post."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_wide').click(); return false;",
+            "Download Wide Template"
+          )
+        ),
+        tags$br(),
         tags$strong("Long-Form Required Columns:"),
-        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_long').click(); return false;",
+            "Download Long Template"
+          )
+        )
       )
     }
   })
@@ -1415,27 +1524,59 @@ server <- function(input, output, session) {
       tagList(
         h4("How to Review"),
         tags$ol(
+          tags$li("Select the analyte panel (BMP or CBC)."),
           tags$li("Upload a review CSV/TSV in wide or long form."),
-          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
           tags$li("Verify the table preview, then label each row as Real, Contaminated, or Equivocal."),
-          tags$li("Use the 'Download labels' button in Actions at any time to save your labels.")
+          tags$li("Click 'Download Labels' in Actions to save your labels.")
         ),
-        tags$strong("Required Columns:"),
-        tags$p("Wide-form: sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
-        tags$p("Long-form: PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+        tags$br(),
+        tags$strong("Wide-Form Required Columns:"),
+        tags$p("sodium, chloride, potassium_plas, co2_totl, bun, creatinine, calcium, glucose, plus *_prior and *_post for each analyte."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_wide').click(); return false;",
+            "Download Wide Template"
+          )
+        ),
+        tags$strong("Long-Form Required Columns:"),
+        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_long').click(); return false;",
+            "Download Long Template"
+          )
+        )
       )
     } else {
       tagList(
         h4("How to Review"),
         tags$ol(
+          tags$li("Select the analyte panel (BMP or CBC)."),
           tags$li("Upload a review CSV/TSV in wide or long form."),
-          tags$li("If you upload long-form data, it will be converted to wide-form automatically."),
           tags$li("Verify the table preview, then label each row as Real, Contaminated, or Equivocal."),
-          tags$li("Use the 'Download labels' button in Actions at any time to save your labels.")
+          tags$li("Click 'Download Labels' in Actions to save your labels.")
         ),
-        tags$strong("Required Columns:"),
-        tags$p("Wide-form: Hgb, WBC, Plt, plus Hgb_prior, WBC_prior, Plt_prior and Hgb_post, WBC_post, Plt_post."),
-        tags$p("Long-form: PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE.")
+        tags$br(),
+        tags$strong("Wide-Form Required Columns:"),
+        tags$p("Hgb, WBC, Plt, plus Hgb_prior, WBC_prior, Plt_prior and Hgb_post, WBC_post, Plt_post."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_wide').click(); return false;",
+            "Download Wide Template"
+          )
+        ),
+        tags$strong("Long-Form Required Columns:"),
+        tags$p("PATIENT_ID, DRAWN_DT_TM, TASK_ASSAY, RESULT_VALUE."),
+        tags$p(
+          tags$a(
+            href = "#",
+            onclick = "document.getElementById('download_template_long').click(); return false;",
+            "Download Long Template"
+          )
+        )
       )
     }
   })
@@ -1550,6 +1691,48 @@ server <- function(input, output, session) {
         col.names = header,
         quote = TRUE
       )
+    }
+  )
+
+  output$download_template_wide <- downloadHandler(
+    filename = function() {
+      if (input$dataset == "BMP") {
+        "bmp_test_wide.csv"
+      } else {
+        "cbc_test_wide.csv"
+      }
+    },
+    content = function(file) {
+      path <- if (input$dataset == "BMP") {
+        file.path(root, "data", "bmp_test_wide.csv")
+      } else {
+        file.path(root, "data", "cbc_test_wide.csv")
+      }
+      if (!file.exists(path)) {
+        stop("Template file not found.")
+      }
+      file.copy(path, file, overwrite = TRUE)
+    }
+  )
+
+  output$download_template_long <- downloadHandler(
+    filename = function() {
+      if (input$dataset == "BMP") {
+        "bmp_test_long.csv"
+      } else {
+        "cbc_test_long.csv"
+      }
+    },
+    content = function(file) {
+      path <- if (input$dataset == "BMP") {
+        file.path(root, "data", "bmp_test_long.csv")
+      } else {
+        file.path(root, "data", "cbc_test_long.csv")
+      }
+      if (!file.exists(path)) {
+        stop("Template file not found.")
+      }
+      file.copy(path, file, overwrite = TRUE)
     }
   )
 }

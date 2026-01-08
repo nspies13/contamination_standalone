@@ -60,7 +60,9 @@ addPrePost <- function(input, lookback_hours = 48){
   priors <- long %>% arrange(drawn_dt_tm) %>% group_by(patient_id, task_assay) %>% mutate(prior = ifelse(as.numeric(difftime(drawn_dt_tm, lag(drawn_dt_tm), units = "hours")) < lookback_hours, lag(result_val), NA)) %>% pivot_wider(id_cols = matches("_id"), names_from = "task_assay", values_from = "prior", names_glue = "{task_assay}_prior") %>% ungroup()
   posts <- long %>% arrange(drawn_dt_tm) %>% group_by(patient_id, task_assay) %>% mutate(post = ifelse(as.numeric(difftime(lead(drawn_dt_tm), drawn_dt_tm, units = "hours")) < lookback_hours, lead(result_val), NA)) %>% pivot_wider(id_cols = matches("_id"), names_from = "task_assay", values_from = "post", names_glue = "{task_assay}_post") %>% ungroup()
   
-  output <- left_join(input, priors %>% select(-patient_id, -epic_id, -specimen_id), by = "index_id") %>% left_join(posts %>% select(-patient_id, -epic_id, -specimen_id), by = "index_id") %>% select(-index_id)
+  output <- left_join(input, priors %>% select(-any_of(c("patient_id"))), by = "index_id") %>%
+    left_join(posts %>% select(-any_of(c("patient_id"))), by = "index_id") %>%
+    select(-index_id)
   
   output
   
@@ -189,10 +191,6 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
 preprocessBmpData <- function(data_long = read_csv("data/bmp_test_long.csv"), lookback_hours = 48) {
   # Normalize column names so downstream helpers can rely on them.
   names(data_long) <- toupper(names(data_long))
-
-  if (!"PATIENT_ID" %in% names(data_long) && "EPIC_MRN" %in% names(data_long)) {
-    data_long <- data_long |> rename(PATIENT_ID = EPIC_MRN)
-  }
 
   if (!"RESULT_VALUE" %in% names(data_long) && "RESULT_VALUE_NUMERIC" %in% names(data_long)) {
     data_long <- data_long |> rename(RESULT_VALUE = RESULT_VALUE_NUMERIC)
