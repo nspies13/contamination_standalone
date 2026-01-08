@@ -242,6 +242,7 @@ ui <- fluidPage(
         gap: 8px;
       }
       #fluids .control-label { padding-bottom: 6px; }
+      #train_fluids .control-label { padding-bottom: 12px; }
       #bmp_model_file { margin-top: 12px; margin-bottom: 4px; }
       #bmp_mix_model_file { margin-top: 0; }
       #file_wide,
@@ -380,7 +381,7 @@ ui <- fluidPage(
             choices = bmp_fluids,
             selected = setdiff(bmp_fluids, "LR")
           ),
-          tags$div(style = "height: 16px;"),
+          tags$div(style = "height: 32px;"),
           fileInput(
             "bmp_model_file",
             "Custom BMP Models (Combined RDS, Optional)",
@@ -413,7 +414,6 @@ ui <- fluidPage(
             choices = bmp_fluids_tbl$fluid,
             selected = bmp_fluids_tbl$fluid
           ),
-          tags$div(style = "height: 16px;"),
           actionButton("add_fluid", "Add Fluid", class = "secondary-btn")
         )
       ),
