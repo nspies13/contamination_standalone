@@ -483,7 +483,7 @@ ui <- fluidPage(
       uiOutput("format_badge"),
       DTOutput("preview"),
       textOutput("preview_count"),
-      tableOutput("train_preview"),
+      DTOutput("train_preview"),
       uiOutput("review_progress"),
       uiOutput("review_table"),
       uiOutput("review_actions")
@@ -1179,7 +1179,7 @@ server <- function(input, output, session) {
       div(
         style = "display:flex; align-items:center; gap:8px;",
         div(class = "loader"),
-        div("Training models. This can take a few minutes.")
+        div("Training models. This may take a while...")
       ),
       footer = NULL,
       easyClose = FALSE
@@ -1429,10 +1429,14 @@ server <- function(input, output, session) {
     }
   })
 
-  output$train_preview <- renderTable({
+  output$train_preview <- renderDT({
     req(input$mode == "Train")
     req(train_preview())
-    head(train_preview(), 10)
+    datatable(
+      head(train_preview(), 10),
+      rownames = FALSE,
+      options = list(pageLength = 10, dom = "t", scrollX = TRUE)
+    )
   })
 
   output$train_instructions <- renderUI({
