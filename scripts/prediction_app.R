@@ -5,6 +5,7 @@ library(jsonlite)
 library(readr)
 library(DT)
 
+options(shiny.maxRequestSize = 1024^3)
 
 app_file <- sys.frame(1)$ofile
 app_dir <- if (!is.null(app_file) && nzchar(app_file)) {
