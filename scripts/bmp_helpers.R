@@ -215,7 +215,8 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
     )
   })
   
-  output <- bind_cols(input, probs, preds, mix_ratios) 
+  output <- bind_cols(input, probs, preds, mix_ratios) |>
+    mutate(across(matches("^(prob_|mix_ratio)"), ~ round(., 3)))
   
   output_no_NA <-
     output |>

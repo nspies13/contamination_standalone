@@ -157,7 +157,8 @@ makeCbcPredictions <- function(
     predict(input) |>
     set_names("mix_ratio_CBC")
 
-  output <- bind_cols(input, probs, preds, mix_ratios)
+  output <- bind_cols(input, probs, preds, mix_ratios) |>
+    mutate(across(matches("^(prob_|mix_ratio)"), ~ round(., 3)))
 
   output_no_NA <-
     output |>
