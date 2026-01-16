@@ -5,6 +5,7 @@ suppressPackageStartupMessages({
   library(tidymodels)
   library(jsonlite)
   library(plumber)
+  library(probably)
   source("scripts/bmp_helpers.R")
 })
 

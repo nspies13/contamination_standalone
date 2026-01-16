@@ -178,6 +178,7 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
 
       prob_tbl |>
         select(all_of(prob_col)) |>
+        mutate(across(everything(), ~round(., 3))) |> 
         set_names(paste0("prob_", type, "_", fluid))
     }) |> 
     bind_cols() |> 
@@ -200,7 +201,7 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
       map(bundle::unbundle)
     mix_ratio_fluids <- mix_ratio_models |> map("fluid")
 
-    pmap(list(mix_ratio_workflows, mix_ratio_fluids), function(workflow, fluid) predict(workflow, input) |> select(.pred) |> set_names(paste0("mix_ratio_", fluid))) |> 
+    pmap(list(mix_ratio_workflows, mix_ratio_fluids), function(workflow, fluid) predict(workflow, input) |> transmute(.pred = round(.pred, 3)) |> set_names(paste0("mix_ratio_", fluid))) |> 
       bind_cols() |> 
       rowwise() |> 
       mutate(
@@ -215,8 +216,11 @@ makeBmpPredictions <- function(input_raw = read_csv("data/bmp_test_wide.csv"),  
     )
   })
   
-  output <- bind_cols(input, probs, preds, mix_ratios) |>
-    mutate(across(matches("^(prob_|mix_ratio)"), ~ round(., 3)))
+  output <- bind_cols(input_raw, probs, preds, mix_ratios) |>
+    mutate(
+      num_NA_realtime = input$num_NA_realtime,
+      num_NA_retro = input$num_NA_retro
+    )
   
   output_no_NA <-
     output |>

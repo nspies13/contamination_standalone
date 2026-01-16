@@ -147,7 +147,7 @@ makeCbcPredictions <- function(
   probs <-
     pmap(list(workflows, types), function(workflow, type) {
       predict(workflow, input, type = "prob") |>
-        select(.pred_1) |>
+        transmute(.pred_1 = round(.pred_1, 3)) |>
         set_names(paste0("prob_", type, "_CBC"))
     }) |>
     bind_cols()
@@ -155,10 +155,14 @@ makeCbcPredictions <- function(
   mix_ratios <- mix_ratio_workflows |>
     bundle::unbundle() |>
     predict(input) |>
+    transmute(.pred = round(.pred, 3)) |> 
     set_names("mix_ratio_CBC")
 
-  output <- bind_cols(input, probs, preds, mix_ratios) |>
-    mutate(across(matches("^(prob_|mix_ratio)"), ~ round(., 3)))
+  output <- bind_cols(input_raw, probs, preds, mix_ratios) |>
+    mutate(
+      num_NA_realtime = input$num_NA_realtime,
+      num_NA_retro = input$num_NA_retro
+    )
 
   output_no_NA <-
     output |>

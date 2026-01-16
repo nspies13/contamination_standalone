@@ -263,6 +263,10 @@ ui <- fluidPage(
         var el = document.getElementById(message.id);
         if (el) { el.click(); }
       });
+      Shiny.addCustomMessageHandler('updatePredictionProgress', function(message) {
+        var el = document.getElementById('prediction-progress');
+        if (el && message && message.text) { el.textContent = message.text; }
+      });
     "
     ))
   ),
@@ -483,7 +487,7 @@ ui <- fluidPage(
       uiOutput("format_badge"),
       DTOutput("preview"),
       textOutput("preview_count"),
-      DTOutput("train_preview"),
+      tableOutput("train_preview"),
       uiOutput("review_progress"),
       uiOutput("review_table"),
       uiOutput("review_actions")
@@ -617,12 +621,26 @@ server <- function(input, output, session) {
       div(
         style = "display:flex; align-items:center; gap:8px;",
         div(class = "loader"),
-        div("Running predictions. This can take a few minutes.")
+        div(
+          div("Running predictions. This can take a few minutes."),
+          div(id = "prediction-progress", style = "margin-top:6px;color:#6b7280;")
+        )
       ),
       footer = NULL,
       easyClose = FALSE
     ))
     on.exit(removeModal(), add = TRUE)
+    update_progress <- function(processed, total) {
+      remaining <- max(total - processed, 0)
+      session$sendCustomMessage(
+        "updatePredictionProgress",
+        list(text = paste0("Processed ", processed, " of ", total, " chunks (", remaining, " remaining)."))
+      )
+    }
+    chunk_size <- 10000L
+    total_rows <- nrow(df)
+    total_chunks <- max(1L, ceiling(total_rows / chunk_size))
+    update_progress(0L, total_chunks)
     if (input$dataset == "BMP") {
       use_defaults <- is.null(input$bmp_model_file) || is.null(input$bmp_mix_model_file)
       if (use_defaults && is.null(bmp_models_cache())) {
@@ -658,10 +676,23 @@ server <- function(input, output, session) {
       include <- input$fluids
       models_combined <- models_combined |> keep(~ .x$fluid %in% include)
       mix_models <- mix_models |> keep(~ .x$fluid %in% include)
-      res <- tryCatch(
-        makeBmpPredictions(df, models_combined = models_combined, mix_ratio_models = mix_models),
-        error = function(e) e
-      )
+      chunk_indices <- split(seq_len(total_rows), ceiling(seq_len(total_rows) / chunk_size))
+      results <- vector("list", length(chunk_indices))
+      for (i in seq_along(chunk_indices)) {
+        chunk_df <- df[chunk_indices[[i]], , drop = FALSE]
+        res <- tryCatch(
+          makeBmpPredictions(chunk_df, models_combined = models_combined, mix_ratio_models = mix_models),
+          error = function(e) e
+        )
+        if (inherits(res, "error")) {
+          status_text(paste("Prediction error:", res$message))
+          preds(NULL)
+          return()
+        }
+        results[[i]] <- res
+        update_progress(i, total_chunks)
+      }
+      res <- bind_rows(results)
     } else {
       use_defaults <- is.null(input$cbc_model_file) || is.null(input$cbc_mix_model_file)
       if (use_defaults && is.null(cbc_models_cache())) {
@@ -694,16 +725,23 @@ server <- function(input, output, session) {
         preds(NULL)
         return()
       }
-      res <- tryCatch(
-        makeCbcPredictions(df, models_combined = models_combined, mix_ratio_workflows = mix_models),
-        error = function(e) e
-      )
-    }
-
-    if (inherits(res, "error")) {
-      status_text(paste("Prediction error:", res$message))
-      preds(NULL)
-      return()
+      chunk_indices <- split(seq_len(total_rows), ceiling(seq_len(total_rows) / chunk_size))
+      results <- vector("list", length(chunk_indices))
+      for (i in seq_along(chunk_indices)) {
+        chunk_df <- df[chunk_indices[[i]], , drop = FALSE]
+        res <- tryCatch(
+          makeCbcPredictions(chunk_df, models_combined = models_combined, mix_ratio_workflows = mix_models),
+          error = function(e) e
+        )
+        if (inherits(res, "error")) {
+          status_text(paste("Prediction error:", res$message))
+          preds(NULL)
+          return()
+        }
+        results[[i]] <- res
+        update_progress(i, total_chunks)
+      }
+      res <- bind_rows(results)
     }
 
     status_text("Predictions ready.")
@@ -1171,7 +1209,6 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$train_models, {
-    clear_outputs()
     req(input$mode == "Train")
     req(train_input())
     status_text("Training models...")
@@ -1179,7 +1216,7 @@ server <- function(input, output, session) {
       div(
         style = "display:flex; align-items:center; gap:8px;",
         div(class = "loader"),
-        div("Training models. This may take a while...")
+        div("Training models. This can take a few minutes.")
       ),
       footer = NULL,
       easyClose = FALSE
@@ -1429,14 +1466,10 @@ server <- function(input, output, session) {
     }
   })
 
-  output$train_preview <- renderDT({
+  output$train_preview <- renderTable({
     req(input$mode == "Train")
     req(train_preview())
-    datatable(
-      head(train_preview(), 10),
-      rownames = FALSE,
-      options = list(pageLength = 10, dom = "t", scrollX = TRUE)
-    )
+    head(train_preview(), 10)
   })
 
   output$train_instructions <- renderUI({

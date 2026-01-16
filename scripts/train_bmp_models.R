@@ -113,6 +113,13 @@ makeSimulatedBinaryTrainingData <- function(train_input, fluid_row) {
 }
 
 train_one_fluid <- function(train_input, fluid_row) {
+  train_input <- train_input |>
+    drop_na(
+      all_of(lab_strings_bmp_no_gap),
+      paste0(lab_strings_bmp_no_gap, "_prior"),
+      paste0(lab_strings_bmp_no_gap, "_post")
+    )
+
   train <- makeSimulatedBinaryTrainingData(train_input, fluid_row)
   prior_exprs <- make_log_delta_prior_exprs(lab_strings_bmp_no_gap)
   post_exprs <- make_log_delta_post_exprs(lab_strings_bmp_no_gap)
@@ -139,8 +146,8 @@ train_one_fluid <- function(train_input, fluid_row) {
   
   model <- boost_tree(mode = "classification", engine = "lightgbm", tree_depth = 10, trees = 1000, learn_rate = 0.1, min_n = 32, loss_reduction = 0.1)
 
-  wf_realtime <- workflow(rec_realtime, model) |> add_tailor(tailor() |> adjust_equivocal_zone(value = 0.4, threshold = 0.5))
-  wf_retro <- workflow(rec_retro, model) |> add_tailor(tailor() |> adjust_equivocal_zone(value = 0.4, threshold = 0.5))
+  wf_realtime <- workflow(rec_realtime, model) |> add_tailor(tailor() |> adjust_equivocal_zone(value = 0.2, threshold = 0.7))
+  wf_retro <- workflow(rec_retro, model) |> add_tailor(tailor() |> adjust_equivocal_zone(value = 0.2, threshold = 0.7))
 
   wf_fit_realtime <- wf_realtime |> fit(train) |> butcher()
   wf_fit_retro <- wf_retro |> fit(train) |> butcher()
@@ -155,7 +162,7 @@ train_one_fluid <- function(train_input, fluid_row) {
 all_models <-
   fluids |>
     (\(df) split(df, seq_len(nrow(df))))() |>
-    map(~ train_one_fluid(data |> drop_na(), .x)) |>
+    map(~ train_one_fluid(data, .x)) |>
     flatten()
 
 write_rds(all_models, output_path)
