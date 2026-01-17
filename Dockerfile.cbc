@@ -1,18 +1,32 @@
-FROM rocker/tidyverse:4.4.2
+FROM rocker/r-ver:4.4.2
 
 # System deps for building lightgbm and friends
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
       build-essential \
       cmake \
-      libssl-dev \
       libcurl4-openssl-dev \
+      libfontconfig1-dev \
+      libfreetype6-dev \
+      libfribidi-dev \
       libgit2-dev \
+      libglib2.0-dev \
+      libharfbuzz-dev \
+      libicu-dev \
+      libjpeg-dev \
+      libpng-dev \
+      libssl-dev \
+      libtiff5-dev \
+      libxml2-dev \
       libgomp1 \
       libsodium-dev && \
     rm -rf /var/lib/apt/lists/*
 
 ENV RENV_PATHS_CACHE=/root/.cache/R/renv
+ENV MAKEFLAGS="-j1"
+ENV CMAKE_BUILD_PARALLEL_LEVEL=1
+ENV CXXFLAGS="-O1 -g0"
+ENV CFLAGS="-O1 -g0"
 WORKDIR /app
 
 # Restore R packages via renv

@@ -1260,7 +1260,7 @@ server <- function(input, output, session) {
       trained_models_paths$BMP <- out_file
       trained_models_ready$BMP <- TRUE
       trained_models_stamp$BMP <- stamp
-      status_text("BMP models trained.")
+      status_text("BMP models trained. Click 'Download Models' if download does not trigger automatically.")
       session$sendCustomMessage("triggerDownload", list(id = "download_trained_models"))
     } else {
       stamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
