@@ -9,7 +9,7 @@ Stand-alone contamination models with Docker images and scripts.
 - Web UI (Shiny): build locally with `docker build -f Dockerfile.app -t contamination-app:latest .`
 - Apple Silicon: add `--platform linux/amd64` to `docker pull` / `docker run`.
 
-## Batch CLI mode (CSV -> CSV with predictions appended)
+## Batch CLI mode for Predictions on CSVs
 - BMP: `docker run --rm -v "$PWD/data:/data" nspies13/contamination-bmp:latest --mode batch --input-file /data/bmp_test_wide.csv --output-file /data/bmp_predictions.csv`
 - CBC: `docker run --rm -v "$PWD/data:/data" nspies13/contamination-cbc:latest --mode batch --input-file /data/cbc_test_wide.csv --output-file /data/cbc_predictions.csv`
 
