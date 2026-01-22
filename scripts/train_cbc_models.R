@@ -30,10 +30,29 @@ data <- readr::read_csv(template_path, show_col_types = FALSE)
 lab_cols <- c("Hgb", "Plt", "WBC")
 all_cols <- c(lab_cols, paste0(lab_cols, "_prior"), paste0(lab_cols, "_post"))
 
+make_log_delta_prior_exprs <- function(cols) {
+  exprs <- map(cols, function(col) {
+    prior_col <- paste0(col, "_prior")
+    rlang::expr(log(0.01 + !!rlang::sym(col) / ifelse(!!rlang::sym(prior_col) == 0, 0.1, !!rlang::sym(prior_col))))
+  })
+  set_names(exprs, paste0(cols, "_log_delta_prior_prop"))
+}
+
+make_log_delta_post_exprs <- function(cols) {
+  exprs <- map(cols, function(col) {
+    post_col <- paste0(col, "_post")
+    rlang::expr(log(0.01 + !!rlang::sym(post_col) / ifelse(!!rlang::sym(col) == 0, 0.1, !!rlang::sym(col))))
+  })
+  set_names(exprs, paste0(cols, "_log_delta_post_prop"))
+}
+
 data <- data |>
   mutate(across(any_of(all_cols), ~ suppressWarnings(as.numeric(.)))) |>
   mutate(across(any_of(all_cols), ~ ifelse(is.finite(.), ., NA_real_))) |>
+  filter(if_all(any_of(all_cols), ~ !is.na(.) & . > 0)) |>
   drop_na(any_of(all_cols))
+
+use_random_forest <- nrow(data) < 200000
 
 make_binary_training <- function(train_input) {
   n <- nrow(train_input)
@@ -59,17 +78,34 @@ make_binary_training <- function(train_input) {
 }
 
 train_class_models <- function(train_df) {
-  rec_base <-
-    recipe(target ~ ., data = train_df |> select(-mix_ratio)) |>
-    step_normalize(all_predictors()) |>
-    step_pca(all_predictors(), num_comp = 5)
+  prior_exprs <- make_log_delta_prior_exprs(lab_cols)
+  post_exprs <- make_log_delta_post_exprs(lab_cols)
 
-  model <- boost_tree(mode = "classification", engine = "lightgbm", trees = 500, learn_rate = 0.1)
+  rec_retro <-
+    recipe(train_df |> select(-mix_ratio)) |>
+    update_role(target, new_role = "outcome") |>
+    update_role(all_of(lab_cols), new_role = "predictor") |>
+    step_mutate(!!!prior_exprs) |>
+    step_mutate(!!!post_exprs) |>
+    step_pca(matches("delta_prior"), num_comp = 3, keep_original_cols = TRUE, options = list(center = TRUE, scale. = TRUE), prefix = "prior_PC") |>
+    step_pca(matches("delta_post"), num_comp = 3, keep_original_cols = TRUE, options = list(center = TRUE, scale. = TRUE), prefix = "post_PC") |>
+    step_pca(matches("delta"), num_comp = 3, prefix = "all_PC", options = list(center = TRUE, scale. = TRUE), keep_original_cols = TRUE)
 
-  wf <- workflow(rec_base, model)
+  rec_realtime <-
+    recipe(train_df |> select(-mix_ratio)) |>
+    update_role(target, new_role = "outcome") |>
+    update_role(all_of(lab_cols), new_role = "predictor") |>
+    step_mutate(!!!prior_exprs) |>
+    step_pca(all_predictors(), num_comp = 3, keep_original_cols = TRUE, options = list(center = TRUE, scale. = TRUE), prefix = "all_PC")
 
-  wf_realtime <- wf
-  wf_retro <- wf
+  model <- if (use_random_forest) {
+    rand_forest(mode = "classification", engine = "ranger", trees = 500)
+  } else {
+    boost_tree(mode = "classification", engine = "lightgbm", trees = 1000, tree_depth = 10, learn_rate = 0.3)
+  }
+
+  wf_realtime <- workflow(rec_realtime, model)
+  wf_retro <- workflow(rec_retro, model)
 
   list(
     list(workflow = bundle(wf_realtime |> fit(train_df |> select(-mix_ratio)) |> butcher()), type = "Realtime", fluid = "CBC"),
@@ -78,12 +114,19 @@ train_class_models <- function(train_df) {
 }
 
 train_mix_model <- function(train_df) {
-  rec <-
-    recipe(mix_ratio ~ ., data = train_df |> select(-target)) |>
-    step_normalize(all_predictors()) |>
-    step_pca(all_predictors(), num_comp = 5)
+  prior_exprs <- make_log_delta_prior_exprs(lab_cols)
+  post_exprs <- make_log_delta_post_exprs(lab_cols)
 
-  model <- boost_tree(mode = "regression", engine = "lightgbm", trees = 300, learn_rate = 0.1)
+  rec <-
+    recipe(data = train_df |> select(-target)) |>
+    update_role(mix_ratio, new_role = "outcome") |>
+    step_mutate(!!!prior_exprs) |>
+    step_mutate(!!!post_exprs) |>
+    step_pca(matches("delta_prior"), num_comp = 3, keep_original_cols = TRUE, options = list(center = TRUE, scale. = TRUE), prefix = "prior_PC") |>
+    step_pca(matches("delta_post"), num_comp = 3, keep_original_cols = TRUE, options = list(center = TRUE, scale. = TRUE), prefix = "post_PC") |>
+    step_pca(matches("delta"), num_comp = 3, prefix = "all_PC", options = list(center = TRUE, scale. = TRUE), keep_original_cols = TRUE)
+
+  model <- boost_tree(mode = "regression", engine = "lightgbm", trees = 1000, learn_rate = 0.5)
 
   wf <- workflow(rec, model) |>
     fit(train_df |> select(-target)) |>

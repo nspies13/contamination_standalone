@@ -57,6 +57,8 @@ data <- data %>%
   filter(if_all(any_of(all_lab_cols), ~ !is.na(.) & . > 0)) %>%
   drop_na(any_of(all_lab_cols))
 
+use_random_forest <- nrow(data) < 200000
+
 simulateContaminationRow <- function(input, mix_ratio, fluid) {
   cols <- names(fluid)[which(names(fluid) %in% names(input))]
 
@@ -144,7 +146,11 @@ train_one_fluid <- function(train_input, fluid_row) {
       step_pca(matches("delta_prior"), num_comp = 3, keep_original_cols = TRUE, options = list(center = TRUE, scale. = TRUE), prefix = "prior_PC")
   rec_realtime$template <- rec_realtime$template |> slice_head(n = 10)
   
-  model <- boost_tree(mode = "classification", engine = "lightgbm", tree_depth = 10, trees = 1000, learn_rate = 0.1, min_n = 32, loss_reduction = 0.1)
+  model <- if (use_random_forest) {
+    rand_forest(mode = "classification", engine = "ranger", trees = 500)
+  } else {
+    boost_tree(mode = "classification", engine = "lightgbm", tree_depth = 10, trees = 1000, learn_rate = 0.3, min_n = 32, loss_reduction = 0.1)
+  }
 
   wf_realtime <- workflow(rec_realtime, model) |> add_tailor(tailor() |> adjust_equivocal_zone(value = 0.2, threshold = 0.7))
   wf_retro <- workflow(rec_retro, model) |> add_tailor(tailor() |> adjust_equivocal_zone(value = 0.2, threshold = 0.7))

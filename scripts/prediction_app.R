@@ -245,7 +245,6 @@ ui <- fluidPage(
       #fluids .control-label { padding-bottom: 6px; }
       #train_fluids .control-label { padding-bottom: 12px; }
       #bmp_model_file { margin-top: 12px; margin-bottom: 4px; }
-      #bmp_mix_model_file { margin-top: 0; }
       #file_wide,
       #file_long,
       #train_file_wide,
@@ -391,11 +390,6 @@ ui <- fluidPage(
             "bmp_model_file",
             "Custom BMP Models (Combined RDS, Optional)",
             accept = c(".rds", ".RDS")
-          ),
-          fileInput(
-            "bmp_mix_model_file",
-            "Custom BMP Mix Ratio Models (RDS, Optional)",
-            accept = c(".rds", ".RDS")
           )
         ),
         conditionalPanel(
@@ -403,11 +397,6 @@ ui <- fluidPage(
           fileInput(
             "cbc_model_file",
             "Custom CBC Models (Combined RDS, Optional)",
-            accept = c(".rds", ".RDS")
-          ),
-          fileInput(
-            "cbc_mix_model_file",
-            "Custom CBC Mix Model (RDS, Optional)",
             accept = c(".rds", ".RDS")
           )
         ),
@@ -487,7 +476,8 @@ ui <- fluidPage(
       uiOutput("format_badge"),
       DTOutput("preview"),
       textOutput("preview_count"),
-      tableOutput("train_preview"),
+      DTOutput("train_preview"),
+      textOutput("train_preview_count"),
       uiOutput("review_progress"),
       uiOutput("review_table"),
       uiOutput("review_actions")
@@ -532,6 +522,13 @@ server <- function(input, output, session) {
     predict_file_name(NULL)
     predict_format(NULL)
     status_text("")
+  }
+  show_upload_required <- function(message) {
+    showModal(modalDialog(
+      div(message),
+      title = "Upload Required",
+      easyClose = TRUE
+    ))
   }
   review_specs <- list(
     BMP = list(
@@ -642,8 +639,7 @@ server <- function(input, output, session) {
     total_chunks <- max(1L, ceiling(total_rows / chunk_size))
     update_progress(0L, total_chunks)
     if (input$dataset == "BMP") {
-      use_defaults <- is.null(input$bmp_model_file) || is.null(input$bmp_mix_model_file)
-      if (use_defaults && is.null(bmp_models_cache())) {
+      if (is.null(bmp_models_cache())) {
         status_text("Loading BMP models...")
         bmp_defaults <- tryCatch(load_bmp_models(), error = function(e) e)
         if (inherits(bmp_defaults, "error")) {
@@ -658,18 +654,9 @@ server <- function(input, output, session) {
       } else {
         tryCatch(safe_read_rds(input$bmp_model_file$datapath), error = function(e) e)
       }
-      mix_models <- if (is.null(input$bmp_mix_model_file)) {
-        bmp_models_cache()$mix_ratio_models
-      } else {
-        tryCatch(safe_read_rds(input$bmp_mix_model_file$datapath), error = function(e) e)
-      }
+      mix_models <- bmp_models_cache()$mix_ratio_models
       if (inherits(models_combined, "error")) {
         status_text(paste("Custom model error:", models_combined$message))
-        preds(NULL)
-        return()
-      }
-      if (inherits(mix_models, "error")) {
-        status_text(paste("Custom mix model error:", mix_models$message))
         preds(NULL)
         return()
       }
@@ -694,8 +681,7 @@ server <- function(input, output, session) {
       }
       res <- bind_rows(results)
     } else {
-      use_defaults <- is.null(input$cbc_model_file) || is.null(input$cbc_mix_model_file)
-      if (use_defaults && is.null(cbc_models_cache())) {
+      if (is.null(cbc_models_cache())) {
         status_text("Loading CBC models...")
         cbc_defaults <- tryCatch(load_cbc_models(), error = function(e) e)
         if (inherits(cbc_defaults, "error")) {
@@ -710,18 +696,9 @@ server <- function(input, output, session) {
       } else {
         tryCatch(safe_read_rds(input$cbc_model_file$datapath), error = function(e) e)
       }
-      mix_models <- if (is.null(input$cbc_mix_model_file)) {
-        cbc_models_cache()$mix_ratio_workflows
-      } else {
-        tryCatch(safe_read_rds(input$cbc_mix_model_file$datapath), error = function(e) e)
-      }
+      mix_models <- cbc_models_cache()$mix_ratio_workflows
       if (inherits(models_combined, "error")) {
         status_text(paste("Custom model error:", models_combined$message))
-        preds(NULL)
-        return()
-      }
-      if (inherits(mix_models, "error")) {
-        status_text(paste("Custom mix model error:", mix_models$message))
         preds(NULL)
         return()
       }
@@ -746,6 +723,7 @@ server <- function(input, output, session) {
 
     status_text("Predictions ready.")
     preds(res)
+    session$sendCustomMessage("triggerDownload", list(id = "download"))
   }
   review_cell_html <- function(value, prior_cmp, post_cmp) {
     val_str <- if (is.na(value)) "" else as.character(value)
@@ -1193,6 +1171,7 @@ server <- function(input, output, session) {
     df <- if (input$predict_input_mode == "Manual Entry") manual_input_df() else predict_input()
     if (is.null(df)) {
       status_text("Prediction error: upload a file first.")
+      show_upload_required("Please upload a file before running predictions.")
       preds(NULL)
       return()
     }
@@ -1210,7 +1189,11 @@ server <- function(input, output, session) {
 
   observeEvent(input$train_models, {
     req(input$mode == "Train")
-    req(train_input())
+    if (is.null(train_input())) {
+      status_text("Training error: upload a file first.")
+      show_upload_required("Please upload a training file before training models.")
+      return()
+    }
     status_text("Training models...")
     showModal(modalDialog(
       div(
@@ -1466,10 +1449,24 @@ server <- function(input, output, session) {
     }
   })
 
-  output$train_preview <- renderTable({
+  output$train_preview <- renderDT({
     req(input$mode == "Train")
     req(train_preview())
-    head(train_preview(), 10)
+    display_df <- head(train_preview(), 10)
+    datatable(
+      display_df,
+      rownames = FALSE,
+      options = list(pageLength = 10, dom = "t", scrollX = TRUE)
+    )
+  })
+
+  output$train_preview_count <- renderText({
+    req(input$mode == "Train")
+    df <- train_preview()
+    if (is.null(df)) {
+      return("")
+    }
+    paste("Loaded", nrow(df), "total rows")
   })
 
   output$train_instructions <- renderUI({
@@ -1661,11 +1658,18 @@ server <- function(input, output, session) {
   output$download <- downloadHandler(
     filename = function() {
       name <- predict_file_name()
+      custom_suffix <- ""
+      if (input$dataset == "BMP" && !is.null(input$bmp_model_file)) {
+        custom_suffix <- "_custom_models"
+      }
+      if (input$dataset == "CBC" && !is.null(input$cbc_model_file)) {
+        custom_suffix <- "_custom_models"
+      }
       if (is.null(name)) {
-        "predictions.csv"
+        paste0("predictions", custom_suffix, ".csv")
       } else {
         base <- tools::file_path_sans_ext(name)
-        paste0(base, "_predictions.csv")
+        paste0(base, "_predictions", custom_suffix, ".csv")
       }
     },
     content = function(file) {
