@@ -3,6 +3,7 @@ library(tidymodels)
 library(bonsai)
 library(bundle)
 library(butcher)
+library(ranger)
 
 # Usage:
 # Rscript scripts/train_cbc_models.R <training_template_csv> [output_models_rds] [output_mix_rds]

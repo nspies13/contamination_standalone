@@ -19,19 +19,24 @@ load_models <- function() {
   )
 }
 
-run_batch <- function(input_file, output_file, models) {
+run_batch <- function(input_file, output_file, input_format, models) {
   if (is.null(input_file) || is.null(output_file)) {
     stop("Batch mode requires --input-file and --output-file")
   }
 
   input <- read_csv(input_file, show_col_types = FALSE, progress = FALSE)
+  input_wide <- if (identical(input_format, "long")) {
+    preprocessBmpData(input)
+  } else {
+    input
+  }
   preds <- makeBmpPredictions(
-    input_raw = input,
+    input_raw = input_wide,
     models_combined = models$models_combined,
     mix_ratio_models = models$mix_ratio_models
   )
-  extra_cols <- setdiff(names(preds), names(input))
-  output <- bind_cols(input, preds[, extra_cols, drop = FALSE])
+  extra_cols <- setdiff(names(preds), names(input_wide))
+  output <- bind_cols(input_wide, preds[, extra_cols, drop = FALSE])
   write_csv(output, output_file)
   message("Wrote BMP predictions to ", output_file)
 }
@@ -122,7 +127,8 @@ main <- function() {
     host = Sys.getenv("HOST", "0.0.0.0"),
     port = as.integer(Sys.getenv("PORT", "8000")),
     input_file = NULL,
-    output_file = NULL
+    output_file = NULL,
+    input_format = "wide"
   )
 
   cli_args <- commandArgs(trailingOnly = TRUE)
@@ -139,6 +145,9 @@ main <- function() {
     } else if (flag %in% c("--output-file", "-o")) {
       args$output_file <- value
       i <- i + 2
+    } else if (flag == "--input-format") {
+      args$input_format <- tolower(value)
+      i <- i + 2
     } else {
       i <- i + 1
     }
@@ -146,7 +155,7 @@ main <- function() {
 
   models <- load_models()
   if (identical(args$mode, "batch")) {
-    run_batch(args$input_file, args$output_file, models)
+    run_batch(args$input_file, args$output_file, args$input_format, models)
   } else {
     start_api(args$host, args$port, models)
   }

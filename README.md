@@ -40,7 +40,14 @@ Load the bundled models and expose a REST API:
   ```
   Each line is parsed independently; the response is a JSON array of per-line results.
 
-Responses are JSON with prediction probabilities/predicted classes.
+Responses are JSON with prediction probabilities/predicted classes (and mix ratios when I fix the versioning error).
+
+### Batch CLI mode (CSV -> CSV with predictions appended)
+- BMP: `docker run --rm -v "$PWD/data:/data" nspies13/contamination-bmp:latest --mode batch --input-file /data/bmp_test_wide.csv --output-file /data/bmp_predictions.csv`
+- CBC: `docker run --rm -v "$PWD/data:/data" nspies13/contamination-cbc:latest --mode batch --input-file /data/cbc_test_wide.csv --output-file /data/cbc_predictions.csv`
+- Long-form batch input (BMP/CBC): add `--input-format long` and pass a long-form CSV with `PATIENT_ID`, `DRAWN_DT_TM`, `TASK_ASSAY`, `RESULT_VALUE`.
+  - BMP example: `docker run --rm -v "$PWD/data:/data" nspies13/contamination-bmp:latest --mode batch --input-format long --input-file /data/bmp_test_long.csv --output-file /data/bmp_predictions.csv`
+  - CBC example: `docker run --rm -v "$PWD/data:/data" nspies13/contamination-cbc:latest --mode batch --input-format long --input-file /data/cbc_test_long.csv --output-file /data/cbc_predictions.csv`
 
 ## Training images
 - BMP training: `docker run --rm -v "$PWD/data:/data" -v "$PWD/tmp_outputs:/outputs" nspies13/contamination-bmp-train:latest /data/bmp_test_wide.csv /data/fluid_concentrations.tsv /outputs/bmp_models_combined.RDS`

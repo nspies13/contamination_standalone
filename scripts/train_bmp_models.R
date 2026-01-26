@@ -3,6 +3,7 @@ library(tidymodels)
 library(bonsai)
 library(bundle)
 library(butcher)
+library(ranger)
 
 # Usage:
 # Rscript scripts/train_bmp_models.R <training_template_csv> <fluids_concentrations_csv> [output_rds_path]
