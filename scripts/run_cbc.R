@@ -22,6 +22,11 @@ run_batch <- function(input_file, output_file, input_format, models) {
 
   input <- read_csv(input_file, show_col_types = FALSE, progress = FALSE)
   input_wide <- if (identical(input_format, "long")) {
+    required <- c("PATIENT_ID", "DRAWN_DT_TM", "TASK_ASSAY", "RESULT_VALUE")
+    missing <- setdiff(required, toupper(names(input)))
+    if (length(missing) > 0) {
+      stop("Long-form input requires columns: ", paste(required, collapse = ", "), call. = FALSE)
+    }
     preprocessCBCData(input)
   } else {
     input
