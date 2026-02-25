@@ -6,7 +6,8 @@ Stand-alone contamination models with Docker images and scripts.
 - CBC runtime: `docker pull nspies13/contamination-cbc:latest`
 - BMP training (no bundled models): `docker pull nspies13/contamination-bmp-train:latest`
 - CBC training (no bundled models): `docker pull nspies13/contamination-cbc-train:latest`
-- Web UI (Shiny): build locally with `docker build -f Dockerfile.app -t contamination-app:latest .`
+- Web UI (Shiny) runtime: `docker pull nspies13/contamination-app:latest`
+- Web UI (Shiny) local build: `docker build -f Dockerfile.app -t contamination-app:latest .`
 - Apple Silicon: add `--platform linux/amd64` to `docker pull` / `docker run`.
 
 ## Batch CLI mode for Predictions on CSVs
@@ -54,8 +55,10 @@ Responses are JSON with prediction probabilities/predicted classes (and mix rati
 - CBC training: `docker run --rm -v "$PWD/data:/data" -v "$PWD/tmp_outputs:/outputs" nspies13/contamination-cbc-train:latest /data/cbc_test_wide.csv /outputs/cbc_models_combined.RDS /outputs/cbc_mix_ratio_model.RDS`
 
 ## FluidFlagger app (Shiny)
-- Build: `docker build --platform linux/amd64 -f Dockerfile.app -t contamination-app:latest .`
-- Run: `docker run --rm -p 8000:8000 contamination-app:latest`
+- Docker Hub: `docker pull nspies13/contamination-app:latest`
+- Run (Docker Hub): `docker run --rm -p 8000:8000 nspies13/contamination-app:latest`
+- Local build: `docker build --platform linux/amd64 -f Dockerfile.app -t contamination-app:latest .`
+- Run (local build): `docker run --rm -p 8000:8000 contamination-app:latest`
 - Open: `http://localhost:8000`
 
 ### Predict mode
