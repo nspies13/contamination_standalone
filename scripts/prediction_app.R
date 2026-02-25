@@ -65,6 +65,26 @@ safe_read_rds <- function(path) {
     }
   )
 }
+
+format_error_message <- function(err) {
+  messages <- character()
+  current <- err
+
+  while (!is.null(current)) {
+    msg <- conditionMessage(current)
+    if (isTRUE(nzchar(msg)) && !(msg %in% messages)) {
+      messages <- c(messages, msg)
+    }
+    current <- current$parent
+  }
+
+  if (length(messages) == 0) {
+    "Unknown error"
+  } else {
+    paste(messages, collapse = " | caused by: ")
+  }
+}
+
 source(file.path(root, "scripts", "bmp_helpers.R"))
 source(file.path(root, "scripts", "cbc_helpers.R"))
 
@@ -672,7 +692,7 @@ server <- function(input, output, session) {
           error = function(e) e
         )
         if (inherits(res, "error")) {
-          status_text(paste("Prediction error:", res$message))
+          status_text(paste("Prediction error:", format_error_message(res)))
           preds(NULL)
           return()
         }
@@ -711,7 +731,7 @@ server <- function(input, output, session) {
           error = function(e) e
         )
         if (inherits(res, "error")) {
-          status_text(paste("Prediction error:", res$message))
+          status_text(paste("Prediction error:", format_error_message(res)))
           preds(NULL)
           return()
         }
